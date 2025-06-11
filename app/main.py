@@ -39,11 +39,13 @@ app.add_middleware(
 )
 
 # Health check for Railway
-
-
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "personal-cms"}
+    try:
+        # Just return ok without checking database
+        return {"status": "ok", "service": "personal-cms"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @app.get("/")
