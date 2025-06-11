@@ -1,0 +1,6 @@
+.env
+cms_env/
+my-cms/
+__pycache__/
+fastapi-cms-starter.md
+railway-deployment-config.md
