@@ -21,11 +21,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Expose port (Railway will set PORT env var)
-EXPOSE $PORT
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD ["curl", "-f", "http://localhost:${PORT}/health"]
+  CMD sh -c 'curl -f http://localhost:${PORT:-8000}/health || exit 1'
 
 # Start command (Railway will override this with railway.json)
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
