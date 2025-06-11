@@ -43,7 +43,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "personal-cms"}
+    return {"status": "ok", "service": "personal-cms"}
 
 
 @app.get("/")

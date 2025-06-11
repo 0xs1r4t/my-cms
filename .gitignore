@@ -1,4 +1,5 @@
 .env
+.dockerignore
 cms_env/
 my-cms/
 __pycache__/
