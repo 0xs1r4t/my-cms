@@ -61,7 +61,4 @@ app.include_router(media_api.router, prefix="/api/v1")
 # Railway port handling
 
 if __name__ == "__main__":
-    import uvicorn
-
-    port = int(os.environ.get("PORT", settings.port))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
+    app.run(debug=True, port=os.getenv("PORT", default=8000))

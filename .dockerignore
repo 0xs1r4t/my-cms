@@ -1,4 +1,12 @@
-.env
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+.git
+.vscode
+
 cms_env/
 my-cms/
 __pycache__/
