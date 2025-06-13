@@ -30,7 +30,14 @@ async def login():
 
 @router.get("/callback", response_model=TokenResponse)
 async def auth_callback(code: str, db: Session = Depends(get_db)):
+    if not code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Authorization code is required",
+        )
+
     """Handle GitHub OAuth callback"""
+
     try:
         # Exchange code for access token
         token_response = await AuthService.exchange_code_for_token(code)
@@ -72,10 +79,15 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
             ),
         )
 
+    except HTTPException:
+        raise
+
     except Exception as e:
+        # Log the actual error for debugging
+        print(f"Auth callback error: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Authentication failed: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication failed. Please try again.",
         )
 
 

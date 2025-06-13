@@ -1,6 +1,6 @@
 from fastapi import status, APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc, and_, or_
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, UTC
@@ -29,14 +29,14 @@ def list_posts(
     db: Session = Depends(get_db),
 ):
     """List posts with pagination and filtering"""
-    query = db.query(Post).options(db.joinedload(Post.content_media))
+    query = db.query(Post).options(joinedload(Post.content_media))
 
     # If not authenticated, only show published posts with published content
     if not current_user:
         query = query.filter(Post.status == "published")
         query = query.outerjoin(Media, Post.content_media_id == Media.id)
         query = query.filter(
-            db.or_(Media.status == "published", Post.content_media_id.is_(None))
+            or_(Media.status == "published", Post.content_media_id.is_(None))
         )
     elif status:
         query = query.filter(Post.status == status)
@@ -94,9 +94,14 @@ def get_post(
         id=str(post.id),
         title=post.title,
         slug=post.slug,
-        content=post.content,
-        excerpt=post.excerpt,
+        description=post.description,
+        tags=post.tags or [],
+        type=post.type,
         status=post.status,
+        content_media_id=(
+            str(post.content_media_id) if post.content_media_id else None
+        ),
+        content_url=(post.content_media.public_url if post.content_media else None),
         published_at=post.published_at,
         created_at=post.created_at,
         updated_at=post.updated_at,

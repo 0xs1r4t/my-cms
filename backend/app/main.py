@@ -1,7 +1,14 @@
 import os
-from fastapi import FastAPI
+import logging
+import time
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from .core.config import settings
 from .core.database import engine
@@ -39,6 +46,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 # Health check for Railway
 @app.get("/health")
@@ -58,6 +71,21 @@ def root():
         "health": "/health",
         "auth": "/auth/login",
     }
+
+
+# Production logging
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+
+    logging.info(
+        f"{request.method} {request.url.path} - "
+        f"Status: {response.status_code} - "
+        f"Time: {process_time:.3f}s"
+    )
+    return response
 
 
 # Include API routers

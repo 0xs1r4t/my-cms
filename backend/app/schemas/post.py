@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
@@ -13,6 +13,21 @@ class PostCreate(BaseModel):
     status: str = "draft"
     content_media_id: Optional[UUID] = None
     meta_data: Optional[dict] = None
+
+    @field_validator("slug")
+    def slug_must_be_valid(cls, v):
+        if not v or not v.replace("-", "").isalnum():
+            raise ValueError(
+                "Slug must contain only alphanumeric characters and hyphens"
+            )
+        return v.lower()
+
+    @field_validator("status")
+    def status_must_be_valid(cls, v):
+        valid_statuses = ["draft", "published", "archived"]
+        if v not in valid_statuses:
+            raise ValueError(f'Status must be one of: {", ".join(valid_statuses)}')
+        return v
 
 
 class PostUpdate(BaseModel):

@@ -55,6 +55,8 @@ class MediaService:
         if status:
             query = query.filter(Media.status == status)
 
+        return query.order_by(desc(Media.created_at)).offset(skip).limit(limit).all()
+
     def get_media_by_id(self, media_id: UUID) -> Optional[Media]:
         """Get media by ID"""
         return self.db.query(Media).filter(Media.id == media_id).first()

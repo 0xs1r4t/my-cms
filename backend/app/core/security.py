@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, status  # , Depends
+from fastapi.security import HTTPBearer  # , HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from .config import settings
 
@@ -13,9 +13,9 @@ class SecurityService:
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(UTC) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(
+            expire = datetime.now(UTC) + timedelta(
                 minutes=settings.jwt_access_token_expire_minutes
             )
         to_encode.update({"exp": expire})
@@ -42,3 +42,12 @@ class SecurityService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
             )
+
+    @staticmethod
+    def create_refresh_token(data: dict):
+        to_encode = data.copy()
+        expire = datetime.now(UTC) + timedelta(days=7)  # Longer expiry
+        to_encode.update({"exp": expire, "type": "refresh"})
+        return jwt.encode(
+            to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        )
