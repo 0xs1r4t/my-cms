@@ -1,27 +1,38 @@
 @import "tailwindcss";
 
+/* ---------- COOLORS PALETTES ---------- */
+/* fcecae, E7C6FF */
+/* https://coolors.co/palette/461d7c-7549b1-e9b200-fdd023-fcecae */
+/* https://coolors.co/palette/ffd6ff-e7c6ff-c8b6ff-b8c0ff-bbd0ff */
+/* https://coolors.co/palette/97dffc-858ae3-613dc1-4e148c-2c0735 */
+
 :root {
-  --background: #fdd6f5;
-  --foreground: #2a1e36;
+  --background: #fcecae;
+  --foreground: #0e0e0e;
+  --primary: #461d7c;
+  --secondary: #fff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
   --font-sans: var(--font-authentic-sans);
+  --font-headings: var(--font-authentic-sans-headings);
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #280948;
     --foreground: #ededed;
   }
-}
+} */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-authentic-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
 h1 {
@@ -30,11 +41,16 @@ h1 {
 }
 
 h1, h2, h3 {
-  font-family: var(--font-authentic-sans-headings), Arial, Helvetica, sans-serif;
+  font-family: var(--font-headings), Arial, Helvetica, sans-serif;
 }
 
 a {
-  color: rgb(0, 191, 255);
+  color: var(--color-primary);
   font-style: italic;
   text-decoration: dotted;
+}
+
+button {
+  background-color: var(--color-primary);
+  color: var(--color-secondary);
 }
