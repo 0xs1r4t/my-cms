@@ -41,6 +41,12 @@ class PostUpdate(BaseModel):
     meta_data: Optional[dict] = None
 
 
+class CreatedByUser(BaseModel):
+    id: str
+    username: str
+    avatar_url: Optional[str] = None
+
+
 class PostResponse(BaseModel):
     id: str
     title: str
@@ -51,6 +57,7 @@ class PostResponse(BaseModel):
     status: str
     content_media_id: Optional[str]
     content_url: Optional[str] = None
+    created_by: CreatedByUser  # NEW
     published_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

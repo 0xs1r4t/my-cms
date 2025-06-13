@@ -8,7 +8,8 @@ from datetime import datetime, UTC
 from ..core.database import get_db
 
 from ..models.post import Post
-from ..schemas.post import PostCreate, PostResponse, PostUpdate
+from ..models.user import User
+from ..schemas.post import PostCreate, PostResponse, PostUpdate, CreatedByUser
 
 from ..models.media import Media
 
@@ -24,12 +25,14 @@ def list_posts(
     limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = Query(None),
     post_type: Optional[str] = Query(None, alias="type"),
-    tags: Optional[str] = Query(None),  # Comma-separated tags
+    tags: Optional[str] = Query(None),
     current_user: Optional[UserResponse] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """List posts with pagination and filtering"""
-    query = db.query(Post).options(joinedload(Post.content_media))
+    query = db.query(Post).options(
+        joinedload(Post.content_media), joinedload(Post.created_by)
+    )
 
     # If not authenticated, only show published posts with published content
     if not current_user:
@@ -39,7 +42,13 @@ def list_posts(
             or_(Media.status == "published", Post.content_media_id.is_(None))
         )
     elif status:
+        # If authenticated and status filter provided, apply it
         query = query.filter(Post.status == status)
+    # If authenticated but no status filter, show all posts from current user + published from others
+    elif current_user:
+        query = query.filter(
+            or_(Post.created_by_id == current_user.id, Post.status == "published")
+        )
 
     if post_type:
         query = query.filter(Post.type == post_type)
@@ -63,6 +72,11 @@ def list_posts(
                 str(post.content_media_id) if post.content_media_id else None
             ),
             content_url=post.content_media.public_url if post.content_media else None,
+            created_by=CreatedByUser(
+                id=str(post.created_by.id),
+                username=post.created_by.username,
+                avatar_url=post.created_by.avatar_url,
+            ),
             published_at=post.published_at,
             created_at=post.created_at,
             updated_at=post.updated_at,
@@ -79,16 +93,31 @@ def get_post(
     db: Session = Depends(get_db),
 ):
     """Get a specific post by ID"""
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = (
+        db.query(Post)
+        .options(joinedload(Post.content_media), joinedload(Post.created_by))
+        .filter(Post.id == post_id)
+        .first()
+    )
+
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    # If not authenticated, only allow access to published posts
-    if not current_user and post.status != "published":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. This post is not published.",
-        )
+    # Check access permissions
+    if not current_user:
+        # Not authenticated - only allow published posts
+        if post.status != "published":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. This post is not published.",
+            )
+    else:
+        # Authenticated - allow access if user is creator OR post is published
+        if post.created_by_id != current_user.id and post.status != "published":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. You can only view your own unpublished posts.",
+            )
 
     return PostResponse(
         id=str(post.id),
@@ -102,6 +131,11 @@ def get_post(
             str(post.content_media_id) if post.content_media_id else None
         ),
         content_url=(post.content_media.public_url if post.content_media else None),
+        created_by=CreatedByUser(
+            id=str(post.created_by.id),
+            username=post.created_by.username,
+            avatar_url=post.created_by.avatar_url,
+        ),
         published_at=post.published_at,
         created_at=post.created_at,
         updated_at=post.updated_at,
@@ -132,6 +166,12 @@ def create_post(
         if not content_media:
             raise HTTPException(status_code=400, detail="Content media not found")
 
+        # Check if user owns the media
+        if content_media.created_by_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="You can only use media files you've uploaded"
+            )
+
     db_post = Post(
         title=post.title,
         slug=post.slug,
@@ -140,6 +180,7 @@ def create_post(
         type=post.type,
         status=post.status,
         content_media_id=post.content_media_id,
+        created_by_id=current_user.id,
         meta_data=post.meta_data or {},
         published_at=datetime.now(UTC) if post.status == "published" else None,
     )
@@ -147,6 +188,10 @@ def create_post(
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
+
+    # Load the created_by relationship
+    db.refresh(db_post)
+    created_by_user = db.query(User).filter(User.id == current_user.id).first()
 
     return PostResponse(
         id=str(db_post.id),
@@ -160,6 +205,11 @@ def create_post(
             str(db_post.content_media_id) if db_post.content_media_id else None
         ),
         content_url=content_media.public_url if content_media else None,
+        created_by=CreatedByUser(
+            id=str(created_by_user.id),
+            username=created_by_user.username,
+            avatar_url=created_by_user.avatar_url,
+        ),
         published_at=db_post.published_at,
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
@@ -175,11 +225,20 @@ def update_post(
     db: Session = Depends(get_db),
 ):
     """Update a post"""
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = (
+        db.query(Post)
+        .options(joinedload(Post.created_by))
+        .filter(Post.id == post_id)
+        .first()
+    )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    update_data = post_update.dict(exclude_unset=True)
+    # Check ownership
+    if post.created_by_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only edit your own posts")
+
+    update_data = post_update.model_dump(exclude_unset=True)
 
     # Handle status change to published
     if (
@@ -199,13 +258,23 @@ def update_post(
         id=str(post.id),
         title=post.title,
         slug=post.slug,
-        content=post.content,
-        excerpt=post.excerpt,
+        description=post.description,
+        tags=post.tags or [],
+        type=post.type,
         status=post.status,
+        content_media_id=(
+            str(post.content_media_id) if post.content_media_id else None
+        ),
+        content_url=post.content_media.public_url if post.content_media else None,
+        created_by=CreatedByUser(
+            id=str(post.created_by.id),
+            username=post.created_by.username,
+            avatar_url=post.created_by.avatar_url,
+        ),
         published_at=post.published_at,
         created_at=post.created_at,
         updated_at=post.updated_at,
-        meta_data=post.meta_data,  # Changed from metadata to meta_data
+        meta_data=post.meta_data,
     )
 
 
@@ -219,6 +288,12 @@ def delete_post(
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+
+    # Check ownership
+    if post.created_by_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="You can only delete your own posts"
+        )
 
     db.delete(post)
     db.commit()
