@@ -37,7 +37,6 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
         )
 
     """Handle GitHub OAuth callback"""
-
     try:
         # Exchange code for access token
         token_response = await AuthService.exchange_code_for_token(code)
