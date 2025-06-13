@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 const authenticSans = localFont({
-  src: "./fonts/AUTHENTICSans-60.woff",
+  src: "./fonts/AUTHENTICSans-90.woff",
   variable: "--font-authentic-sans",
 });
 
