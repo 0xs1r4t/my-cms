@@ -1,51 +1,21 @@
-# app/api/posts.py
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from fastapi import status, APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc, and_, or_
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
-from pydantic import BaseModel
+from datetime import datetime, UTC
 
 from ..core.database import get_db
+
 from ..models.post import Post
+from ..schemas.post import PostCreate, PostResponse, PostUpdate
+
+from ..models.media import Media
+
+from .auth import get_current_user, get_optional_user
+from ..schemas.user import UserResponse
 
 router = APIRouter(prefix="/posts", tags=["posts"])
-
-
-# Pydantic models
-class PostCreate(BaseModel):
-    title: str
-    slug: str
-    content: str
-    excerpt: Optional[str] = None
-    status: str = "draft"
-    meta_data: Optional[dict] = None  # Changed from metadata to meta_data
-
-
-class PostUpdate(BaseModel):
-    title: Optional[str] = None
-    slug: Optional[str] = None
-    content: Optional[str] = None
-    excerpt: Optional[str] = None
-    status: Optional[str] = None
-    meta_data: Optional[dict] = None  # Changed from metadata to meta_data
-
-
-class PostResponse(BaseModel):
-    id: str
-    title: str
-    slug: str
-    content: str
-    excerpt: Optional[str]
-    status: str
-    published_at: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
-    meta_data: Optional[dict]  # Changed from metadata to meta_data
-
-    class Config:
-        from_attributes = True
 
 
 @router.get("/", response_model=List[PostResponse])
@@ -53,13 +23,30 @@ def list_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = Query(None),
+    post_type: Optional[str] = Query(None, alias="type"),
+    tags: Optional[str] = Query(None),  # Comma-separated tags
+    current_user: Optional[UserResponse] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """List posts with pagination and filtering"""
-    query = db.query(Post)
+    query = db.query(Post).options(joinedload(Post.content_media))
 
-    if status:
+    # If not authenticated, only show published posts with published content
+    if not current_user:
+        query = query.filter(Post.status == "published")
+        query = query.outerjoin(Media, Post.content_media_id == Media.id)
+        query = query.filter(
+            or_(Media.status == "published", Post.content_media_id.is_(None))
+        )
+    elif status:
         query = query.filter(Post.status == status)
+
+    if post_type:
+        query = query.filter(Post.type == post_type)
+
+    if tags:
+        tag_list = [tag.strip() for tag in tags.split(",")]
+        query = query.filter(Post.tags.overlap(tag_list))
 
     posts = query.order_by(desc(Post.created_at)).offset(skip).limit(limit).all()
 
@@ -68,20 +55,66 @@ def list_posts(
             id=str(post.id),
             title=post.title,
             slug=post.slug,
-            content=post.content,
-            excerpt=post.excerpt,
+            description=post.description,
+            tags=post.tags or [],
+            type=post.type,
             status=post.status,
+            content_media_id=(
+                str(post.content_media_id) if post.content_media_id else None
+            ),
+            content_url=post.content_media.public_url if post.content_media else None,
             published_at=post.published_at,
             created_at=post.created_at,
             updated_at=post.updated_at,
-            meta_data=post.meta_data,  # Changed from metadata to meta_data
+            meta_data=post.meta_data,
         )
         for post in posts
     ]
 
 
+@router.get("/{post_id}", response_model=PostResponse)
+def get_post(
+    post_id: UUID,
+    current_user: Optional[UserResponse] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Get a specific post by ID"""
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    # If not authenticated, only allow access to published posts
+    if not current_user and post.status != "published":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. This post is not published.",
+        )
+
+    return PostResponse(
+        id=str(post.id),
+        title=post.title,
+        slug=post.slug,
+        description=post.description,
+        tags=post.tags or [],
+        type=post.type,
+        status=post.status,
+        content_media_id=(
+            str(post.content_media_id) if post.content_media_id else None
+        ),
+        content_url=(post.content_media.public_url if post.content_media else None),
+        published_at=post.published_at,
+        created_at=post.created_at,
+        updated_at=post.updated_at,
+        meta_data=post.meta_data,
+    )
+
+
 @router.post("/", response_model=PostResponse)
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
+def create_post(
+    post: PostCreate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Create a new post"""
     # Check if slug already exists
     existing_post = db.query(Post).filter(Post.slug == post.slug).first()
@@ -90,14 +123,25 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
             status_code=400, detail="Post with this slug already exists"
         )
 
+    # Validate content_media_id if provided
+    content_media = None
+    if post.content_media_id:
+        content_media = (
+            db.query(Media).filter(Media.id == post.content_media_id).first()
+        )
+        if not content_media:
+            raise HTTPException(status_code=400, detail="Content media not found")
+
     db_post = Post(
         title=post.title,
         slug=post.slug,
-        content=post.content,
-        excerpt=post.excerpt,
+        description=post.description,
+        tags=post.tags,
+        type=post.type,
         status=post.status,
-        meta_data=post.meta_data or {},  # Changed from metadata to meta_data
-        published_at=datetime.utcnow() if post.status == "published" else None,
+        content_media_id=post.content_media_id,
+        meta_data=post.meta_data or {},
+        published_at=datetime.now(UTC) if post.status == "published" else None,
     )
 
     db.add(db_post)
@@ -108,39 +152,28 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
         id=str(db_post.id),
         title=db_post.title,
         slug=db_post.slug,
-        content=db_post.content,
-        excerpt=db_post.excerpt,
+        description=db_post.description,
+        tags=db_post.tags or [],
+        type=db_post.type,
         status=db_post.status,
+        content_media_id=(
+            str(db_post.content_media_id) if db_post.content_media_id else None
+        ),
+        content_url=content_media.public_url if content_media else None,
         published_at=db_post.published_at,
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
-        meta_data=db_post.meta_data,  # Changed from metadata to meta_data
-    )
-
-
-@router.get("/{post_id}", response_model=PostResponse)
-def get_post(post_id: UUID, db: Session = Depends(get_db)):
-    """Get a specific post by ID"""
-    post = db.query(Post).filter(Post.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    return PostResponse(
-        id=str(post.id),
-        title=post.title,
-        slug=post.slug,
-        content=post.content,
-        excerpt=post.excerpt,
-        status=post.status,
-        published_at=post.published_at,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
-        meta_data=post.meta_data,  # Changed from metadata to meta_data
+        meta_data=db_post.meta_data,
     )
 
 
 @router.put("/{post_id}", response_model=PostResponse)
-def update_post(post_id: UUID, post_update: PostUpdate, db: Session = Depends(get_db)):
+def update_post(
+    post_id: UUID,
+    post_update: PostUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Update a post"""
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
@@ -154,7 +187,7 @@ def update_post(post_id: UUID, post_update: PostUpdate, db: Session = Depends(ge
         and update_data["status"] == "published"
         and post.status != "published"
     ):
-        update_data["published_at"] = datetime.utcnow()
+        update_data["published_at"] = datetime.now(UTC)
 
     for field, value in update_data.items():
         setattr(post, field, value)
@@ -177,7 +210,11 @@ def update_post(post_id: UUID, post_update: PostUpdate, db: Session = Depends(ge
 
 
 @router.delete("/{post_id}")
-def delete_post(post_id: UUID, db: Session = Depends(get_db)):
+def delete_post(
+    post_id: UUID,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Delete a post"""
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
