@@ -1,10 +1,10 @@
-# app/models/post.py
 from sqlalchemy import Column, String, Text, DateTime, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from sqlalchemy.sql import func
 import uuid
 from ..core.database import Base
+
 
 class Post(Base):
     __tablename__ = "posts"
@@ -17,12 +17,14 @@ class Post(Base):
     status = Column(String(20), default="draft", index=True)
     published_at = Column(DateTime(timezone=True), index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     # Changed from 'metadata' to 'meta_data' to avoid SQLAlchemy reserved word
     meta_data = Column("metadata", JSONB)
 
     # Indexes for performance
     __table_args__ = (
-        Index('idx_posts_status_published', 'status', 'published_at'),
-        Index('idx_posts_slug', 'slug'),
+        Index("idx_posts_status_published", "status", "published_at"),
+        Index("idx_posts_slug", "slug"),
     )

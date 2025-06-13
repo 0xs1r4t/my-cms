@@ -1,4 +1,3 @@
-# app/models/media.py
 from sqlalchemy import Column, String, BigInteger, DateTime, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func

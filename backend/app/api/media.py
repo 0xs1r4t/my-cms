@@ -1,5 +1,4 @@
-# app/api/media.py
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import status, APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
@@ -8,6 +7,9 @@ from ..core.database import get_db
 from ..services.storage_service import StorageService
 from ..services.media_service import MediaService
 from ..core.config import settings
+
+from .auth import get_current_user, get_optional_user
+from ..schemas.user import UserResponse
 
 router = APIRouter(prefix="/media", tags=["media"])
 
@@ -31,7 +33,11 @@ def get_asset_type(mime_type: str) -> str:
 
 
 @router.post("/upload")
-async def upload_media(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_media(
+    file: UploadFile = File(...),
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Upload media file to Supabase Storage"""
 
     # Validate file type
@@ -81,6 +87,7 @@ def list_media(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     asset_type: Optional[str] = Query(None),
+    current_user: Optional[UserResponse] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """List media files"""
@@ -104,7 +111,11 @@ def list_media(
 
 
 @router.delete("/{media_id}")
-async def delete_media(media_id: UUID, db: Session = Depends(get_db)):
+async def delete_media(
+    media_id: UUID,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Delete media file"""
     media_service = MediaService(db)
     media = media_service.get_media_by_id(media_id)

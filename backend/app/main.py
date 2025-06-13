@@ -5,13 +5,14 @@ from contextlib import asynccontextmanager
 
 from .core.config import settings
 from .core.database import engine
-from .models import post, media
-from .api import posts, media as media_api
+from .models import post, media, user
+from .api import posts, media as media_api, auth
 
 # Create tables
 
 post.Base.metadata.create_all(bind=engine)
 media.Base.metadata.create_all(bind=engine)
+user.Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Health check for Railway
 @app.get("/health")
 def health_check():
@@ -50,11 +52,16 @@ def health_check():
 
 @app.get("/")
 def root():
-    return {"message": "Personal CMS API", "docs": "/docs", "health": "/health"}
+    return {
+        "message": "Personal CMS API",
+        "docs": "/docs",
+        "health": "/health",
+        "auth": "/auth/login",
+    }
 
 
 # Include API routers
-
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(posts.router, prefix="/api/v1")
 app.include_router(media_api.router, prefix="/api/v1")
 
