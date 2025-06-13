@@ -8,7 +8,7 @@ from ..core.config import settings
 
 
 class StorageService:
-    def __init(self, use_admin: bool = False):
+    def __init__(self, use_admin: bool = False):
         self.client: Client = admin_supabase if use_admin else supabase
         self.bucket = settings.storage_bucket
 

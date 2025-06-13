@@ -18,7 +18,8 @@ class MediaService:
         mime_type: str,
         file_size: int,
         asset_type: str,
-        meta_data: dict = None,  # Changed from metadata to meta_data
+        status: str = "draft",  # New
+        meta_data: dict = None,
     ) -> Media:
         """Create media record"""
         db_media = Media(
@@ -29,7 +30,8 @@ class MediaService:
             mime_type=mime_type,
             file_size=file_size,
             asset_type=asset_type,
-            meta_data=meta_data or {},  # Changed from metadata to meta_data
+            status=status,
+            meta_data=meta_data or {},
         )
 
         self.db.add(db_media)
@@ -38,7 +40,11 @@ class MediaService:
         return db_media
 
     def get_media_list(
-        self, skip: int = 0, limit: int = 20, asset_type: Optional[str] = None
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        asset_type: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> List[Media]:
         """Get media files with pagination"""
         query = self.db.query(Media)
@@ -46,7 +52,8 @@ class MediaService:
         if asset_type:
             query = query.filter(Media.asset_type == asset_type)
 
-        return query.order_by(desc(Media.created_at)).offset(skip).limit(limit).all()
+        if status:
+            query = query.filter(Media.status == status)
 
     def get_media_by_id(self, media_id: UUID) -> Optional[Media]:
         """Get media by ID"""

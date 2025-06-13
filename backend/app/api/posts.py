@@ -6,8 +6,11 @@ from uuid import UUID
 from datetime import datetime, UTC
 
 from ..core.database import get_db
+
 from ..models.post import Post
 from ..schemas.post import PostCreate, PostResponse, PostUpdate
+
+from ..models.media import Media
 
 from .auth import get_current_user, get_optional_user
 from ..schemas.user import UserResponse
@@ -20,17 +23,30 @@ def list_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = Query(None),
+    post_type: Optional[str] = Query(None, alias="type"),
+    tags: Optional[str] = Query(None),  # Comma-separated tags
     current_user: Optional[UserResponse] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """List posts with pagination and filtering"""
-    query = db.query(Post)
+    query = db.query(Post).options(db.joinedload(Post.content_media))
 
-    # If not authenticated, only show published posts
+    # If not authenticated, only show published posts with published content
     if not current_user:
         query = query.filter(Post.status == "published")
+        query = query.outerjoin(Media, Post.content_media_id == Media.id)
+        query = query.filter(
+            db.or_(Media.status == "published", Post.content_media_id.is_(None))
+        )
     elif status:
         query = query.filter(Post.status == status)
+
+    if post_type:
+        query = query.filter(Post.type == post_type)
+
+    if tags:
+        tag_list = [tag.strip() for tag in tags.split(",")]
+        query = query.filter(Post.tags.overlap(tag_list))
 
     posts = query.order_by(desc(Post.created_at)).offset(skip).limit(limit).all()
 
@@ -39,9 +55,14 @@ def list_posts(
             id=str(post.id),
             title=post.title,
             slug=post.slug,
-            content=post.content,
-            excerpt=post.excerpt,
+            description=post.description,
+            tags=post.tags or [],
+            type=post.type,
             status=post.status,
+            content_media_id=(
+                str(post.content_media_id) if post.content_media_id else None
+            ),
+            content_url=post.content_media.public_url if post.content_media else None,
             published_at=post.published_at,
             created_at=post.created_at,
             updated_at=post.updated_at,
@@ -97,13 +118,24 @@ def create_post(
             status_code=400, detail="Post with this slug already exists"
         )
 
+    # Validate content_media_id if provided
+    content_media = None
+    if post.content_media_id:
+        content_media = (
+            db.query(Media).filter(Media.id == post.content_media_id).first()
+        )
+        if not content_media:
+            raise HTTPException(status_code=400, detail="Content media not found")
+
     db_post = Post(
         title=post.title,
         slug=post.slug,
-        content=post.content,
-        excerpt=post.excerpt,
+        description=post.description,
+        tags=post.tags,
+        type=post.type,
         status=post.status,
-        meta_data=post.meta_data or {},  # Changed from metadata to meta_data
+        content_media_id=post.content_media_id,
+        meta_data=post.meta_data or {},
         published_at=datetime.now(UTC) if post.status == "published" else None,
     )
 
@@ -115,13 +147,18 @@ def create_post(
         id=str(db_post.id),
         title=db_post.title,
         slug=db_post.slug,
-        content=db_post.content,
-        excerpt=db_post.excerpt,
+        description=db_post.description,
+        tags=db_post.tags or [],
+        type=db_post.type,
         status=db_post.status,
+        content_media_id=(
+            str(db_post.content_media_id) if db_post.content_media_id else None
+        ),
+        content_url=content_media.public_url if content_media else None,
         published_at=db_post.published_at,
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
-        meta_data=db_post.meta_data,  # Changed from metadata to meta_data
+        meta_data=db_post.meta_data,
     )
 
 

@@ -16,8 +16,14 @@ class Media(Base):
     file_path = Column(String, nullable=False)
     public_url = Column(String, nullable=False)
     asset_type = Column(String(50), index=True)
-    # Changed from 'metadata' to 'meta_data' to avoid SQLAlchemy reserved word
+    status = Column(String(20), default="draft", index=True)  # New
     meta_data = Column("metadata", JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
-    __table_args__ = (Index("idx_media_type_created", "asset_type", "created_at"),)
+    __table_args__ = (
+        Index("idx_media_type_created", "asset_type", "created_at"),
+        Index("idx_media_status", "status"),
+    )

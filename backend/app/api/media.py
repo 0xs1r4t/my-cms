@@ -35,6 +35,7 @@ def get_asset_type(mime_type: str) -> str:
 @router.post("/upload")
 async def upload_media(
     file: UploadFile = File(...),
+    status: str = "draft",
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -63,7 +64,8 @@ async def upload_media(
             mime_type=upload_result["mime_type"],
             file_size=upload_result["file_size"],
             asset_type=asset_type,
-            meta_data={},  # Changed from metadata to meta_data
+            status=status,
+            meta_data={},
         )
 
         return {
@@ -73,7 +75,9 @@ async def upload_media(
             "public_url": media_record.public_url,
             "asset_type": media_record.asset_type,
             "file_size": media_record.file_size,
+            "status": media_record.status,  # New
             "created_at": media_record.created_at.isoformat(),
+            "updated_at": media_record.updated_at.isoformat(),  # New
         }
 
     except HTTPException:
@@ -87,13 +91,21 @@ def list_media(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     asset_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
     current_user: Optional[UserResponse] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """List media files"""
     media_service = MediaService(db)
+
+    # If not authenticated, only show published media
+    if not current_user:
+        status_filter = "published"
+    else:
+        status_filter = status
+
     media_files = media_service.get_media_list(
-        skip=skip, limit=limit, asset_type=asset_type
+        skip=skip, limit=limit, asset_type=asset_type, status=status_filter
     )
 
     return [
@@ -104,7 +116,9 @@ def list_media(
             "public_url": media.public_url,
             "asset_type": media.asset_type,
             "file_size": media.file_size,
+            "status": media.status,  # New
             "created_at": media.created_at.isoformat(),
+            "updated_at": media.updated_at.isoformat(),  # New
         }
         for media in media_files
     ]
