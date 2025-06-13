@@ -1,20 +1,31 @@
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
+import os
 from typing import List
 
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
-class Settings(BaseSettings):  # Supabase Database
+
+class Settings(BaseSettings):
+    # Database
     database_url: str
 
     # Supabase Configuration
     supabase_url: str
     supabase_anon_key: str
-    supabase_service_key: str  # For admin operations
+    supabase_service_key: str
 
     # Security
     secret_key: str
+    jwt_secret_key: str
     algorithm: str = "HS256"
+    jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    jwt_access_token_expire_minutes: int = 30
+
+    # GitHub OAuth
+    github_client_id: str
+    github_client_secret: str
+    redirect_uri: str
 
     # File Storage
     storage_bucket: str = "media"
@@ -38,26 +49,16 @@ class Settings(BaseSettings):  # Supabase Database
         "application/pdf",
     ]
 
-    # CORS
+    # CORS - Environment-specific
     allowed_origins: List[str] = [
-        "http://localhost:8000",
-        "https://content.sirat.com",
+        "http://localhost:3000",  # React dev server
+        "http://localhost:8000",  # FastAPI dev server
+        "https://manage.sirat.xyz",  # Production frontend
+        "https://content.sirat.xyz",  # Production backend
     ]
 
-    # Railway-specific
-    port: int = 8000
-
-    # Github OAUTH
-    github_client_id: str
-    github_client_secret: str
-
-    # JWT
-    jwt_secret_key: str
-    jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 30
-
-    # Redirect
-    redirect_uri: str
+    # Railway
+    port: int = int(os.getenv("PORT", 8000))
 
     # Validations
     @field_validator("database_url")
