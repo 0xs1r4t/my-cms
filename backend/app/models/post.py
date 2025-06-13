@@ -12,10 +12,14 @@ class Post(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
-    description = Column(Text)  # Changed from excerpt
-    tags = Column(ARRAY(String), default=[], index=True)  # New
-    type = Column(String(50), index=True)  # New
+    description = Column(Text)
+    tags = Column(ARRAY(String), default=[], index=True)
+    type = Column(String(50), index=True)
     status = Column(String(20), default="draft", index=True)
+
+    # User association
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by = relationship("User", foreign_keys=[created_by_id])
 
     # Content stored as media reference
     content_media_id = Column(UUID(as_uuid=True), ForeignKey("media.id"), nullable=True)
@@ -33,4 +37,5 @@ class Post(Base):
         Index("idx_posts_slug", "slug"),
         Index("idx_posts_tags", "tags"),
         Index("idx_posts_type", "type"),
+        Index("idx_posts_created_by", "created_by_id"),  # NEW
     )
