@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # File Storage
     storage_bucket: str = "media"
-    max_file_size: int = 5 * 1024 * 1024  # 5MB
+    max_file_size: int = 5242880  # 5MB
     allowed_file_types: List[str] = [
         "image/jpeg",
         "image/png",
