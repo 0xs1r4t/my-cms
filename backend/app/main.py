@@ -36,28 +36,49 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
-
+# Enhanced CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Be explicit
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "DNT",
+        "Cache-Control",
+        "X-Mx-ReqToken",
+        "Keep-Alive",
+        "X-Requested-With",
+        "If-Modified-Since",
+    ],
+    expose_headers=["*"],
+    max_age=86400,  # Cache preflight for 24 hours
 )
 
 # Rate limiting
-
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# What's going with CORS?
-
+# Enhanced CORS debugging - What's going on here?
 @app.middleware("http")
 async def cors_debug(request: Request, call_next):
-    print(f"CORS test — method: {request.method}, origin: {request.headers.get('origin')}")
+    origin = request.headers.get('origin')
+    method = request.method
+    print(f"🌐 CORS Debug - Method: {method}, Origin: {origin}, Path: {request.url.path}")
+    
+    # Add CORS headers manually for debugging
     response = await call_next(request)
+    
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        
+    print(f"📤 Response Status: {response.status_code}")
     return response
 
 

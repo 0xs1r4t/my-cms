@@ -114,11 +114,6 @@ async def get_current_user(
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """Dependency to get current authenticated user"""
-
-    if request.method == "OPTIONS":
-        # Let CORS preflight pass through
-        return Response(status_code=200)
-
     user_id_str = SecurityService.verify_token(credentials.credentials)
     user_id = UUID(user_id_str)
 
@@ -143,6 +138,11 @@ async def get_current_user(
 async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):
     """Get current authenticated user info"""
     return current_user
+
+@router.options("/me")
+async def options_me():
+    """Handle OPTIONS preflight for /me endpoint"""
+    return Response(status_code=200)
 
 async def get_optional_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
