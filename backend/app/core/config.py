@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     ]
 
     # Frontend URL
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str
 
     # Railway
     port: int = int(os.getenv("PORT", 8000))
