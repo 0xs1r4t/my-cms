@@ -1,5 +1,5 @@
 import urllib.parse
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials
 
@@ -109,10 +109,15 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
 
 # Authentication dependency
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """Dependency to get current authenticated user"""
+    
+    if request.method == "OPTIONS":
+        return None
+    
     user_id_str = SecurityService.verify_token(credentials.credentials)
     user_id = UUID(user_id_str)
 
@@ -137,6 +142,11 @@ async def get_current_user(
 async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):
     """Get current authenticated user info"""
     return current_user
+
+@router.options("/me")
+async def options_me():
+    """CORS preflight request"""
+    return {}
 
 
 async def get_optional_user(
