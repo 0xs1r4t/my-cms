@@ -109,22 +109,25 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
 
 # Authentication dependency
 async def get_current_user(
-    request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """Dependency to get current authenticated user"""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user_id_str = SecurityService.verify_token(credentials.credentials)
     user_id = UUID(user_id_str)
-
     user_service = UserService(db)
     user = user_service.get_user_by_id(user_id)
-
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-
     return UserResponse(
         id=user.id,
         username=user.username,
@@ -142,14 +145,25 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
 @router.options("/me")
 async def options_me():
     """Handle OPTIONS preflight for /me endpoint"""
-    return Response(status_code=200)
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "https://manage.sirat.xyz",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, Origin, User-Agent, DNT, Cache-Control, X-Mx-ReqToken, Keep-Alive, X-Requested-With, If-Modified-Since",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
 
 async def get_optional_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ) -> Optional[UserResponse]:
     """Dependency to get current user if authenticated, otherwise returns None"""
     try:
+        if not credentials:
+            return None
         return await get_current_user(credentials, db)
     except HTTPException:
         return None
