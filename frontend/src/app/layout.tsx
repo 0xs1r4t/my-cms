@@ -4,12 +4,12 @@ import "./globals.css";
 
 const authenticSans = localFont({
   src: "./fonts/AUTHENTICSans-90.woff",
-  variable: "--font-authentic-sans",
+  variable: "--authentic-sans",
 });
 
 const authenticSansHeadings = localFont({
   src: "./fonts/AUTHENTICSans-Condensed-150.woff",
-  variable: "--font-authentic-sans-headings",
+  variable: "--authentic-sans-condensed",
 });
 
 export const metadata: Metadata = {
@@ -18,18 +18,20 @@ export const metadata: Metadata = {
     "Sirat Baweja's personal, self-hosted, content management system. To be built with every tool she might possibly need.",
 };
 
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   return (
     <html lang="en">
       <body
-        className={`${authenticSans.variable} ${authenticSansHeadings.variable} antialiased`}
+        className={`${authenticSans.variable} ${authenticSansHeadings.variable} antialiased flex flex-col container mx-auto justify-center items-center justify-items-center min-h-screen`}
       >
         {children}
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;
