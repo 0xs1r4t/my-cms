@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { setAuthCookie } from "@/lib/cookies";
@@ -8,7 +8,7 @@ import { useUserStore } from "@/store/useStore";
 
 import { CallbackQuerySchema, UserResponseSchema } from "@/utils/zodSchemas";
 
-const CallbackPage = () => {
+const CallbackContent = () => {
   const router = useRouter();
   const params = useSearchParams();
   const setUser = useUserStore((s) => s.setUser);
@@ -59,7 +59,17 @@ const CallbackPage = () => {
     handleCallback();
   }, [params, router, setUser]);
 
-  return <p className="text-center mt-10">Logging you in...</p>;
+  return <div className="text-center mt-10">Logging you in...</div>;
+};
+
+const CallbackPage = () => {
+  return (
+    <Suspense
+      fallback={<div className="text-center mt-10">Loading page...</div>}
+    >
+      <CallbackContent />
+    </Suspense>
+  );
 };
 
 export default CallbackPage;

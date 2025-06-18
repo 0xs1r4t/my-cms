@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 
 import LogoutButton from "@/components/LogoutButton";
 
-const DashboardPage = async ({ params }: { params: { user: string } }) => {
+const UserPage = async ({ params }: { params: Promise<{ user: string }> }) => {
+  const { user } = await params;
   const token = await getAuthCookie();
 
   if (!token) {
@@ -14,10 +15,10 @@ const DashboardPage = async ({ params }: { params: { user: string } }) => {
 
   return (
     <Fragment>
-      <h1 className="text-2xl font-bold">{` Welcome ${params.user}!`}</h1>
+      <h1 className="text-2xl font-bold">{` Welcome ${user}!`}</h1>
       <LogoutButton />
     </Fragment>
   );
 };
 
-export default DashboardPage;
+export default UserPage;
