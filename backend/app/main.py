@@ -52,6 +52,14 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# What's going with CORS?
+
+@app.middleware("http")
+async def cors_debug(request: Request, call_next):
+    print(f"CORS test — method: {request.method}, origin: {request.headers.get('origin')}")
+    response = await call_next(request)
+    return response
+
 
 # Health check for Railway
 @app.get("/health")
