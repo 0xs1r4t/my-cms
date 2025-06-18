@@ -57,6 +57,9 @@ class Settings(BaseSettings):
         "https://content.sirat.xyz",  # Production backend
     ]
 
+    # Frontend URL
+    frontend_url: str = "http://localhost:3000"
+
     # Railway
     port: int = int(os.getenv("PORT", 8000))
 

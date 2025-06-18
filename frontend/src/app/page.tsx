@@ -1,14 +1,14 @@
-import React, { Suspense } from "react";
-import AuthWrapper from "@/components/AuthWrapper";
+import React, { Fragment, Suspense } from "react";
+import LoginButton from "@/components/LoginButton";
 
-export default function Home() {
+const Home = () => {
   return (
-    <div className="flex justify-center items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-authentic-sans)]">
-      <main className="flex flex-col items-center justify-items-center sm:items-start">
-        <Suspense fallback={<div>Loading page...</div>}>
-          <AuthWrapper>{""}</AuthWrapper>
-        </Suspense>
-      </main>
-    </div>
+    <Fragment>
+      <Suspense fallback={<div>Loading page...</div>}>
+        <LoginButton />
+      </Suspense>
+    </Fragment>
   );
-}
+};
+
+export default Home;

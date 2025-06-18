@@ -2,6 +2,7 @@ import urllib.parse
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials
+
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import Optional
@@ -51,6 +52,14 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
         # Get user info from GitHub
         github_user = await AuthService.get_github_user_info(access_token)
 
+        allowed_github_usernames = ["0xs1r4t"] # only allow me to login
+
+        if github_user["login"] not in allowed_github_usernames:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to access this resource",
+            )
+
         # Initialize user service
         user_service = UserService(db)
 
@@ -67,16 +76,24 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
         # Create JWT token
         jwt_token = SecurityService.create_access_token(data={"sub": str(user.id)})
 
-        return TokenResponse(
-            access_token=jwt_token,
-            user=UserResponse(
-                id=user.id,
-                username=user.username,
-                email=user.email,
-                avatar_url=user.avatar_url,
-                created_at=user.created_at,
-            ),
+        # return TokenResponse(
+        #     access_token=jwt_token,
+        #     user=UserResponse(
+        #         id=user.id,
+        #         username=user.username,
+        #         email=user.email,
+        #         avatar_url=user.avatar_url,
+        #         created_at=user.created_at,
+        #     ),
+        # )
+
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/callback?access_token={jwt_token}&user={user.id}"
         )
+
+    except Exception as e:
+        print(f"Auth callback error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Authentication failed. Please try again.")
 
     except HTTPException:
         raise
