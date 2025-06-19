@@ -54,7 +54,9 @@ class Settings(BaseSettings):
         "http://localhost:3000",  # React dev server
         "http://localhost:8000",  # FastAPI dev server
         "https://manage.sirat.xyz",  # Production frontend
+        "http://manage.sirat.xyz",  # Production frontend
         "https://content.sirat.xyz",  # Production backend
+        "http://content.sirat.xyz",  # Production backend
     ]
 
     # Frontend URL
