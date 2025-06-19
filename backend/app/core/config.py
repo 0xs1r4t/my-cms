@@ -51,12 +51,12 @@ class Settings(BaseSettings):
 
     # CORS - Environment-specific
     allowed_origins: List[str] = [
-        "http://localhost:3000",  # React dev server
-        "http://localhost:8000",  # FastAPI dev server
-        "https://manage.sirat.xyz",  # Production frontend
-        "http://manage.sirat.xyz",  # Production frontend
-        "https://content.sirat.xyz",  # Production backend
-        "http://content.sirat.xyz",  # Production backend
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://manage.sirat.xyz",
+        "http://manage.sirat.xyz",
+        "https://content.sirat.xyz",
+        "http://content.sirat.xyz",
     ]
 
     # Frontend URL
