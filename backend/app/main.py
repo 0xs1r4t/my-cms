@@ -25,6 +25,10 @@ user.Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # Startup
     print("🚀 CMS API starting up...")
+    print("🔍 DEBUG: Raw allowed_origins from settings:")
+    for i, origin in enumerate(settings.allowed_origins):
+        print(f"    [{i}] '{origin}' (len: {len(origin)}, repr: {repr(origin)})")
+    print(f"🔍 DEBUG: settings.allowed_origins type: {type(settings.allowed_origins)}")
     yield  # Shutdown
     print("🛑 CMS API shutting down...")
 
@@ -40,10 +44,10 @@ app = FastAPI(
 # https://fastapi.tiangolo.com/tutorial/cors/#use-corsmiddleware
 # https://www.starlette.io/middleware/
 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/OPTIONS#preflighted_requests_in_cors
-temp_origins = settings.allowed_origins + ["*"]  # temporary
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=temp_origins,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=[
