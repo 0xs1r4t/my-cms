@@ -1,6 +1,6 @@
 from fastapi import status, APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc, and_, or_
+from sqlalchemy import desc, or_
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, UTC
@@ -13,7 +13,7 @@ from ..schemas.post import PostCreate, PostResponse, PostUpdate, CreatedByUser
 
 from ..models.media import Media
 
-from .auth import get_current_user, get_optional_user
+from .auth import get_current_user  # , get_optional_user
 from ..schemas.user import UserResponse
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -26,7 +26,8 @@ def list_posts(
     status: Optional[str] = Query(None),
     post_type: Optional[str] = Query(None, alias="type"),
     tags: Optional[str] = Query(None),
-    current_user: Optional[UserResponse] = Depends(get_optional_user),
+    # current_user: Optional[UserResponse] = Depends(get_optional_user),
+    current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """List posts with pagination and filtering"""
@@ -89,7 +90,8 @@ def list_posts(
 @router.get("/{post_id}", response_model=PostResponse)
 def get_post(
     post_id: UUID,
-    current_user: Optional[UserResponse] = Depends(get_optional_user),
+    # current_user: Optional[UserResponse] = Depends(get_optional_user),
+    current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get a specific post by ID"""
