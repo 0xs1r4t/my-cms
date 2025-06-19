@@ -89,16 +89,17 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
 
 # Authentication dependency
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    # credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """Dependency to get current authenticated user"""
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # if not credentials:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Authorization required",
+    #         headers={"WWW-Authenticate": "Bearer"},
+    #     )
 
     user_id_str = SecurityService.verify_token(credentials.credentials)
     user_id = UUID(user_id_str)
@@ -117,6 +118,7 @@ async def get_current_user(
     )
 
 
+# Implement in the future
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
@@ -130,15 +132,9 @@ async def get_optional_user(
         return None
 
 
-# skips OPTIONS pre-flight check
-@router.options("/me")
-async def options_me():
-    return Response(status_code=200)
-
-
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    current_user: UserResponse = Depends(get_optional_user),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     """Get current authenticated user info"""
     return current_user

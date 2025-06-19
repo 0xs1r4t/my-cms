@@ -21,7 +21,10 @@ class OptionalHTTPBearer(HTTPBearer):
 
 
 # Use the custom HTTPBearer that handles OPTIONS requests
-security = OptionalHTTPBearer(auto_error=False)
+# security = OptionalHTTPBearer(auto_error=False)
+
+# FastAPI returns 401 automatically if no token provided.
+security = HTTPBearer(auto_error=True)
 
 
 class SecurityService:

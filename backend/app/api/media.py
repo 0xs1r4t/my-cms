@@ -1,6 +1,5 @@
-from fastapi import status, APIRouter, Depends, HTTPException, UploadFile, File, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
@@ -11,7 +10,7 @@ from ..core.config import settings
 from ..schemas.post import CreatedByUser
 from ..schemas.media import MediaResponse
 
-from .auth import get_current_user, get_optional_user
+from .auth import get_current_user  # , get_optional_user
 from ..schemas.user import UserResponse
 
 router = APIRouter(prefix="/media", tags=["media"])
@@ -101,7 +100,8 @@ def list_media(
     limit: int = Query(20, ge=1, le=100),
     asset_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-    current_user: Optional[UserResponse] = Depends(get_optional_user),
+    # current_user: Optional[UserResponse] = Depends(get_optional_user),
+    current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """List media files"""
