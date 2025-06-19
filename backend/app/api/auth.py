@@ -76,17 +76,6 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
         # Create JWT token
         jwt_token = SecurityService.create_access_token(data={"sub": str(user.id)})
 
-        # return TokenResponse(
-        #     access_token=jwt_token,
-        #     user=UserResponse(
-        #         id=user.id,
-        #         username=user.username,
-        #         email=user.email,
-        #         avatar_url=user.avatar_url,
-        #         created_at=user.created_at,
-        #     ),
-        # )
-
         return RedirectResponse(
             url=f"{settings.frontend_url}/callback?access_token={jwt_token}&user={user.id}"
         )
@@ -95,17 +84,6 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
         print(f"Auth callback error: {str(e)}")
         raise HTTPException(
             status_code=500, detail="Authentication failed. Please try again."
-        )
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        # Log the actual error for debugging
-        print(f"Auth callback error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication failed. Please try again.",
         )
 
 
@@ -139,12 +117,6 @@ async def get_current_user(
     )
 
 
-@router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):
-    """Get current authenticated user info"""
-    return current_user
-
-
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
@@ -156,3 +128,17 @@ async def get_optional_user(
         return await get_current_user(credentials, db)
     except HTTPException:
         return None
+
+
+# skips OPTIONS pre-flight check
+@router.options("/me")
+async def options_me():
+    return Response(status_code=200)
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(
+    current_user: UserResponse = Depends(get_optional_user),
+):
+    """Get current authenticated user info"""
+    return current_user
