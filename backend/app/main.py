@@ -2,7 +2,7 @@ import os
 import logging
 import time
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -44,20 +44,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "Origin",
-        "User-Agent",
-        "DNT",
-        "Cache-Control",
-        "X-Mx-ReqToken",
-        "Keep-Alive",
-        "X-Requested-With",
-        "If-Modified-Since",
-    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Rate limiting
@@ -74,19 +63,12 @@ async def cors_debug(request: Request, call_next):
     print(
         f"🌐 CORS Debug - Method: {method}, Origin: {origin}, Path: {request.url.path}"
     )
+    print(f"📋 All request headers: {dict(request.headers)}")
 
-    # Add CORS headers manually for debugging
     response = await call_next(request)
-
     print(f"📤 Response Status: {response.status_code}")
+    print(f"📋 Response headers: {dict(response.headers)}")
     return response
-
-
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(rest_of_path: str):
-    # Optionally log the preflight request
-    print(f"🌐 Preflight for: /{rest_of_path}")
-    return Response(status_code=200)
 
 
 # Health check for Railway
