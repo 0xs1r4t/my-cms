@@ -145,14 +145,6 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
     return current_user
 
 
-# from https://github.com/fastapi/fastapi/discussions/9564#discussioncomment-5987076
-@router.options("/")
-async def options_root():
-    allowed_methods = ["GET", "OPTIONS"]
-    headers = {"Allow": ", ".join(allowed_methods)}
-    return Response(content=None, headers=headers)
-
-
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),

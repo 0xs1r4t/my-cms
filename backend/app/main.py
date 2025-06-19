@@ -2,7 +2,7 @@ import os
 import logging
 import time
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -80,6 +80,13 @@ async def cors_debug(request: Request, call_next):
 
     print(f"📤 Response Status: {response.status_code}")
     return response
+
+
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    # Optionally log the preflight request
+    print(f"🌐 Preflight for: /{rest_of_path}")
+    return Response(status_code=200)
 
 
 # Health check for Railway
