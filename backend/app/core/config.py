@@ -50,14 +50,7 @@ class Settings(BaseSettings):
     ]
 
     # CORS - Environment-specific
-    allowed_origins: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "https://manage.sirat.xyz",
-        "http://manage.sirat.xyz",
-        "https://content.sirat.xyz",
-        "http://content.sirat.xyz",
-    ]
+    allowed_origins: List[str]
 
     # Frontend URL
     frontend_url: str
