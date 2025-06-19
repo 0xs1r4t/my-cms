@@ -52,7 +52,7 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
         # Get user info from GitHub
         github_user = await AuthService.get_github_user_info(access_token)
 
-        allowed_github_usernames = ["0xs1r4t"] # only allow me to login
+        allowed_github_usernames = ["0xs1r4t"]  # only allow me to login
 
         if github_user["login"] not in allowed_github_usernames:
             raise HTTPException(
@@ -93,7 +93,9 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):
 
     except Exception as e:
         print(f"Auth callback error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Authentication failed. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Authentication failed. Please try again."
+        )
 
     except HTTPException:
         raise
@@ -142,19 +144,14 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
     """Get current authenticated user info"""
     return current_user
 
-@router.options("/me")
-async def options_me():
-    """Handle OPTIONS preflight for /me endpoint"""
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "https://manage.sirat.xyz",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, Origin, User-Agent, DNT, Cache-Control, X-Mx-ReqToken, Keep-Alive, X-Requested-With, If-Modified-Since",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "86400",
-        }
-    )
+
+# from https://github.com/fastapi/fastapi/discussions/9564#discussioncomment-5987076
+@router.options("/")
+async def options_root():
+    allowed_methods = ["GET", "OPTIONS"]
+    headers = {"Allow": ", ".join(allowed_methods)}
+    return Response(content=None, headers=headers)
+
 
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
