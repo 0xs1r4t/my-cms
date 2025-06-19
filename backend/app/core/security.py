@@ -5,13 +5,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from .config import settings
 
-security = HTTPBearer()
-
 
 class OptionalHTTPBearer(HTTPBearer):
     """Custom HTTPBearer that allows OPTIONS requests without authentication"""
 
-    async def __call__(self, request: Request = None) -> Optional[HTTPAuthorizationCredentials]:
+    async def __call__(
+        self, request: Request = None
+    ) -> Optional[HTTPAuthorizationCredentials]:
         # Allow OPTIONS requests to pass through without authentication
         if request and request.method == "OPTIONS":
             return None
@@ -19,8 +19,10 @@ class OptionalHTTPBearer(HTTPBearer):
         # For all other requests, use normal HTTPBearer behavior
         return await super().__call__(request)
 
+
 # Use the custom HTTPBearer that handles OPTIONS requests
 security = OptionalHTTPBearer(auto_error=False)
+
 
 class SecurityService:
     @staticmethod
