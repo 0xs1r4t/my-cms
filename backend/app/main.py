@@ -3,7 +3,7 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -37,26 +37,15 @@ app = FastAPI(
 )
 
 # Enhanced CORS middleware
+# https://fastapi.tiangolo.com/tutorial/cors/#use-corsmiddleware
+# https://www.starlette.io/middleware/
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/OPTIONS#preflighted_requests_in_cors
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Be explicit
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "Origin",
-        "User-Agent",
-        "DNT",
-        "Cache-Control",
-        "X-Mx-ReqToken",
-        "Keep-Alive",
-        "X-Requested-With",
-        "If-Modified-Since",
-    ],
-    expose_headers=["*"],
-    max_age=86400,  # Cache preflight for 24 hours
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Rate limiting
@@ -64,20 +53,19 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
 # Enhanced CORS debugging - What's going on here?
 @app.middleware("http")
 async def cors_debug(request: Request, call_next):
-    origin = request.headers.get('origin')
+    origin = request.headers.get("origin")
     method = request.method
-    print(f"🌐 CORS Debug - Method: {method}, Origin: {origin}, Path: {request.url.path}")
-    
+    print(
+        f"🌐 CORS Debug - Method: {method}, Origin: {origin}, Path: {request.url.path}"
+    )
+
     # Add CORS headers manually for debugging
     response = await call_next(request)
-    
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        
+
     print(f"📤 Response Status: {response.status_code}")
     return response
 
@@ -98,7 +86,6 @@ def root():
         "message": "Personal CMS API",
         "docs": "/docs",
         "health": "/health",
-        "auth": "/auth/login",
     }
 
 
