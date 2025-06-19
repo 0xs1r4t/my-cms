@@ -40,13 +40,25 @@ app = FastAPI(
 # https://fastapi.tiangolo.com/tutorial/cors/#use-corsmiddleware
 # https://www.starlette.io/middleware/
 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/OPTIONS#preflighted_requests_in_cors
+temp_origins = settings.allowed_origins + ["*"]  # temporary
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=temp_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "DNT",
+        "Cache-Control",
+        "X-Mx-ReqToken",
+        "Keep-Alive",
+        "X-Requested-With",
+        "If-Modified-Since",
+    ],
 )
 
 # Rate limiting
@@ -59,23 +71,33 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.middleware("http")
 async def cors_debug(request: Request, call_next):
     start_time = time.time()
-    process_time = time.time() - start_time
 
     origin = request.headers.get("origin")
     method = request.method
     print(
-        f"🌐 CORS Debug - Method: {method}, Origin: {origin}, Path: {request.url.path}"
+        f"🌐 CORS Debug - Method: {method}, Origin: '{origin}', Path: {request.url.path}"
     )
+    print(
+        f"🔍 Origin in allowed list: {origin in settings.allowed_origins if origin else 'No origin'}"
+    )
+    print(f"📋 Allowed origins: {settings.allowed_origins}")
+    print(f"🔍 Allowed origins type: {type(settings.allowed_origins)}")
+
+    # Check each allowed origin individually
+    if origin:
+        for i, allowed in enumerate(settings.allowed_origins):
+            print(f"    [{i}] '{allowed}' == '{origin}': {allowed == origin}")
+            print(f"    [{i}] '{allowed}' type: {type(allowed)}, len: {len(allowed)}")
+            print(f"    [{i}] '{origin}' type: {type(origin)}, len: {len(origin)}")
 
     response = await call_next(request)
 
-    # Manually add CORS header if it's missing and origin is allowed
-    if method == "OPTIONS" and origin in settings.allowed_origins:
-        if "access-control-allow-origin" not in response.headers:
-            response.headers["access-control-allow-origin"] = origin
-            print(f"🔧 Manually added access-control-allow-origin: {origin}")
+    process_time = time.time() - start_time
 
     print(f"📤 Response Status: {response.status_code}")
+    print(
+        f"🎯 Has access-control-allow-origin: {'access-control-allow-origin' in response.headers}"
+    )
     print(f"📋 Response headers: {dict(response.headers)}")
 
     logging.info(
