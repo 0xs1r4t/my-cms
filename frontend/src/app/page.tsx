@@ -1,5 +1,5 @@
 import React, { Fragment, Suspense } from "react";
-import LoginButton from "@/components/LoginButton";
+import LoginButton from "@/components/Buttons/Login";
 
 const Home = () => {
   return (
