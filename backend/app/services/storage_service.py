@@ -2,7 +2,7 @@ from supabase import Client
 from fastapi import UploadFile, HTTPException
 import uuid
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ..core.supabase import supabase, admin_supabase
 from ..core.config import settings
 
@@ -15,7 +15,7 @@ class StorageService:
     async def upload_file(
         self, file: UploadFile, folder: str = "media"
     ) -> Dict[str, Any]:
-        """Upload file to Supabase Storage"""
+        """Upload single file to Supabase Storage"""
         try:
             # Validate file size
             content = await file.read()
@@ -60,6 +60,24 @@ class StorageService:
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+    async def upload_multiple_files(
+        self, files: List[UploadFile], folder: str = "media"
+    ) -> List[Dict[str, Any]]:
+        """Upload multiple files to Supabase Storage"""
+        results = []
+
+        for file in files:
+            try:
+                result = await self.upload_file(file, folder)
+                results.append(result)
+            except Exception as e:
+                # Continue with other files even if one fails
+                results.append(
+                    {"error": str(e), "original_name": file.filename, "success": False}
+                )
+
+        return results
 
     def delete_file(self, file_path: str) -> bool:
         """Delete file from Supabase Storage"""

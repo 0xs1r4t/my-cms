@@ -1,3 +1,5 @@
+export * from "@/utils/interfaces";
+
 type MediaItem = {
   id: string;
   filename: string;

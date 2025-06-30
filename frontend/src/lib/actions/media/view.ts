@@ -1,4 +1,5 @@
 import { getAuthCookie } from "@/lib/cookies";
+import type { MediaItem } from "@/utils/interfaces";
 
 export const getMediaFiles = async ({
   skip = 0,

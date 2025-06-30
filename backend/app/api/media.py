@@ -34,59 +34,64 @@ def get_asset_type(mime_type: str) -> str:
         return "document"
 
 
-@router.post("/upload", response_model=MediaResponse)
+@router.post("/upload", response_model=List[MediaResponse])
 async def upload_media(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     status: str = "draft",
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Upload media file to Supabase Storage"""
+    """Upload 1 or multiple media files to Supabase Storage"""
 
-    # Validate file type
-    if file.content_type not in settings.allowed_file_types:
+    # Validate files exist
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    # Validate file types
+    invalid_files = []
+    for file in files:
+        if file.content_type not in settings.allowed_file_types:
+            invalid_files.append(f"{file.filename}: {file.content_type}")
+
+    if invalid_files:
         raise HTTPException(
-            status_code=400, detail=f"File type {file.content_type} not allowed"
+            status_code=400, detail=f"Invalid file types: {', '.join(invalid_files)}"
         )
 
     try:
-        # Upload to Supabase Storage
+        # Upload all files to Supabase Storage
         storage = StorageService(use_admin=True)
-        upload_result = await storage.upload_file(file)
+        upload_results = await storage.upload_multiple_files(files)
 
         # Save metadata to database
         media_service = MediaService(db)
-        asset_type = get_asset_type(file.content_type)
-
-        media_record = media_service.create_media(
-            filename=upload_result["filename"],
-            original_name=upload_result["original_name"],
-            file_path=upload_result["file_path"],
-            public_url=upload_result["public_url"],
-            mime_type=upload_result["mime_type"],
-            file_size=upload_result["file_size"],
-            asset_type=asset_type,
-            status=status,
-            created_by_id=current_user.id,
-            meta_data={},
+        media_records = media_service.create_multiple_media(
+            upload_results, current_user.id, status
         )
 
-        return MediaResponse(
-            id=str(media_record.id),
-            filename=media_record.filename,
-            original_name=media_record.original_name,
-            public_url=media_record.public_url,
-            asset_type=media_record.asset_type,
-            file_size=media_record.file_size,
-            status=media_record.status,
-            created_by=CreatedByUser(
-                id=str(media_record.created_by.id),
-                username=media_record.created_by.username,
-                avatar_url=media_record.created_by.avatar_url,
-            ),
-            created_at=media_record.created_at,
-            updated_at=media_record.updated_at,
-        )
+        # Convert to response format
+        responses = []
+        for media_record in media_records:
+            responses.append(
+                MediaResponse(
+                    id=str(media_record.id),
+                    filename=media_record.filename,
+                    original_name=media_record.original_name,
+                    public_url=media_record.public_url,
+                    asset_type=media_record.asset_type,
+                    file_size=media_record.file_size,
+                    status=media_record.status,
+                    created_by=CreatedByUser(
+                        id=str(media_record.created_by.id),
+                        username=media_record.created_by.username,
+                        avatar_url=media_record.created_by.avatar_url,
+                    ),
+                    created_at=media_record.created_at,
+                    updated_at=media_record.updated_at,
+                )
+            )
+
+        return responses
 
     except HTTPException:
         raise

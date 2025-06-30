@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { setAuthCookie } from "@/lib/cookies";
 import { useUserStore } from "@/store/useStore";
+import type { User } from "@/utils/interfaces";
 
 import { CallbackQuerySchema, UserResponseSchema } from "@/utils/zodSchemas";
 

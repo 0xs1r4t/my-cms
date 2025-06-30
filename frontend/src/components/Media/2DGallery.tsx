@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { getMediaFiles } from "@/lib/actions/media/view";
 import { useMediaStore } from "@/store/useStore";
-import ThreeGallery from "@/components/Media/3DGallery";
 
 const MediaGallery = () => {
   const [loading, setLoading] = useState(true);
@@ -34,9 +34,20 @@ const MediaGallery = () => {
   }
 
   return (
-    <>
-      <ThreeGallery mediaItems={mediaItems} />
-    </>
+    <div className="flex flex-wrap basis-full place-content-center gap-2 p-2">
+      {mediaItems.map((item) => (
+        <span key={item.id}>
+          <Image
+            src={item.public_url}
+            alt={item.original_name || item.filename}
+            className="flex-auto w-[200px] h-auto block object-cover"
+            width={200}
+            height={200}
+            loading="lazy"
+          />
+        </span>
+      ))}
+    </div>
   );
 };
 

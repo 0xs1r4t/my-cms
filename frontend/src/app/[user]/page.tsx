@@ -19,11 +19,16 @@ const UserPage = async ({ params }: { params: Promise<{ user: string }> }) => {
 
   return (
     <Fragment>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">{`Welcome ${user}!`}</h1>{" "}
-        <ActionsButton />
-        <LogoutButton />
+      {/* UI Elements - positioned above gallery */}
+      <div className="relative z-10 flex justify-between items-center mb-8 p-4">
+        <h1 className="text-3xl font-bold">{`Welcome ${user}!`}</h1>
+        <div className="flex items-center gap-4">
+          <ActionsButton />
+          <LogoutButton />
+        </div>
       </div>
+
+      {/* Gallery component */}
       <MediaGallery />
     </Fragment>
   );
