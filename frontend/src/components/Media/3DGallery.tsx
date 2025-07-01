@@ -3,10 +3,11 @@
 import React, { useRef, useMemo, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Image } from "@react-three/drei";
+import { A11y } from "@react-three/a11y";
 import * as THREE from "three";
+
 import type { MediaItem, ThreeGalleryProps } from "@/utils/interfaces";
 
-// Individual image component using drei Image
 const ImagePlane = ({
   item,
   position,
@@ -26,14 +27,20 @@ const ImagePlane = ({
       scale={scale}
       transparent
       opacity={1}
-      side={THREE.DoubleSide}
+      side={THREE.FrontSide}
       toneMapped={false}
     />
   );
 };
 
 // Main gallery component
-const GalleryScene = ({ mediaItems }: { mediaItems: MediaItem[] }) => {
+const GalleryScene = ({
+  mediaItems,
+  selectedIndex,
+}: {
+  mediaItems: MediaItem[];
+  selectedIndex: number;
+}) => {
   const { camera } = useThree();
 
   // Generate evenly distributed positions
@@ -46,7 +53,7 @@ const GalleryScene = ({ mediaItems }: { mediaItems: MediaItem[] }) => {
 
       // Use golden ratio for better distribution
       const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
-      const radius = Math.sqrt(index) * 2; // Gradually increase radius
+      const radius = Math.sqrt(index); // Gradually increase radius
       const angle = index * goldenAngle;
 
       // Spread across a larger area
@@ -57,7 +64,7 @@ const GalleryScene = ({ mediaItems }: { mediaItems: MediaItem[] }) => {
       const z = (index % 2 === 0 ? 1 : -1) * (Math.random() * 2 + 1);
 
       // Scale: slightly random but consistent
-      const scale = 2 + Math.random() * 1; // Between 2 and 3 (increased from 1.2-1.8)
+      const scale = 1.5 + Math.random() * 0.5;
 
       return {
         item,
@@ -78,13 +85,19 @@ const GalleryScene = ({ mediaItems }: { mediaItems: MediaItem[] }) => {
       <ambientLight intensity={1} />
 
       {/* Render image planes */}
-      {imagePositions.map(({ item, position, scale }) => (
+      {imagePositions.map(({ item, position, scale }, index) => (
+        // <A11y
+        //   key={item.id}
+        //   role="image"
+        //   description={item.original_name || item.filename}
+        // >
         <ImagePlane
           key={item.id}
           item={item}
           position={position}
           scale={scale}
         />
+        // </A11y>
       ))}
     </>
   );
@@ -142,20 +155,51 @@ const CustomControls = () => {
 };
 
 const ThreeGallery: React.FC<ThreeGalleryProps> = ({ mediaItems }) => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case "ArrowRight":
+          setSelectedIndex((prev) => (prev + 1) % mediaItems.length);
+          break;
+        case "ArrowLeft":
+          setSelectedIndex(
+            (prev) => (prev - 1 + mediaItems.length) % mediaItems.length
+          );
+          break;
+        case "Enter":
+          // Handle selection
+          console.log("Selected:", mediaItems[selectedIndex]);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mediaItems, selectedIndex]);
+
   return (
-    <Canvas
-      camera={{ position: [0, 0, 10], fov: 60 }}
-      style={{
-        width: "100vw",
-        height: "100vh",
-        position: "fixed",
-        top: 0,
-        left: 0,
-      }}
-    >
-      <GalleryScene mediaItems={mediaItems} />
-      <CustomControls />
-    </Canvas>
+    <div>
+      <Canvas
+        camera={{ position: [0, 0, 10], fov: 60 }}
+        style={{
+          width: "100vw",
+          height: "100vh",
+          position: "fixed",
+          top: 0,
+          left: 0,
+        }}
+      >
+        <GalleryScene mediaItems={mediaItems} selectedIndex={selectedIndex} />
+        <CustomControls />
+      </Canvas>
+
+      {/* Keyboard navigation instructions */}
+      <div className="fixed bottom-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
+        Use arrow keys to navigate, Enter to select
+      </div>
+    </div>
   );
 };
 

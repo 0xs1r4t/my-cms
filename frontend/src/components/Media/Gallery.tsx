@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { A11yAnnouncer } from "@react-three/a11y";
 import { getMediaFiles } from "@/lib/actions/media/view";
 import { useMediaStore } from "@/store/useStore";
 import ThreeGallery from "@/components/Media/3DGallery";
@@ -36,6 +37,7 @@ const MediaGallery = () => {
   return (
     <>
       <ThreeGallery mediaItems={mediaItems} />
+      {/* <A11yAnnouncer /> */}
     </>
   );
 };
