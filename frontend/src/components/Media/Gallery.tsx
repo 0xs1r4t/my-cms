@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { A11yAnnouncer } from "@react-three/a11y";
+
+import ThreeGallery from "@/components/Media/3DGallery";
 import { getMediaFiles } from "@/lib/actions/media/view";
 import { useMediaStore } from "@/store/useStore";
-import ThreeGallery from "@/components/Media/3DGallery";
 
 const MediaGallery = () => {
   const [loading, setLoading] = useState(true);
@@ -12,7 +12,7 @@ const MediaGallery = () => {
 
   const fetchMedia = async () => {
     setLoading(true);
-    const result = await getMediaFiles();
+    const result = await getMediaFiles({ limit: 100 });
     if (result) {
       setMediaItems(result);
     }
@@ -37,7 +37,6 @@ const MediaGallery = () => {
   return (
     <>
       <ThreeGallery mediaItems={mediaItems} />
-      {/* <A11yAnnouncer /> */}
     </>
   );
 };

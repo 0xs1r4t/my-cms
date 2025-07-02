@@ -1,78 +1,47 @@
 "use client";
 
-import React, { useRef, useMemo, useEffect, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Image } from "@react-three/drei";
-import { A11y } from "@react-three/a11y";
-import * as THREE from "three";
+import React, { useMemo, useEffect } from "react";
 
+import * as THREE from "three";
+import { Canvas, useThree } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+
+import ImagePlane from "@/components/Media/ImagePlane";
 import type { MediaItem, ThreeGalleryProps } from "@/utils/interfaces";
 
-const ImagePlane = ({
-  item,
-  position,
-  scale,
-}: {
-  item: MediaItem;
-  position: [number, number, number];
-  scale: number;
-}) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+const GalleryScene = ({ mediaItems }: { mediaItems: MediaItem[] }) => {
+  const { camera, viewport } = useThree();
 
-  return (
-    <Image
-      ref={meshRef}
-      url={item.public_url}
-      position={position}
-      scale={scale}
-      transparent
-      opacity={1}
-      side={THREE.FrontSide}
-      toneMapped={false}
-    />
-  );
-};
-
-// Main gallery component
-const GalleryScene = ({
-  mediaItems,
-  selectedIndex,
-}: {
-  mediaItems: MediaItem[];
-  selectedIndex: number;
-}) => {
-  const { camera } = useThree();
-
-  // Generate evenly distributed positions
   const imagePositions = useMemo(() => {
     if (!mediaItems.length) return [];
+    console.log(
+      `NO.OF IMAGES: ${mediaItems.length} \nVIEWPORT:\nwidth: ${viewport.width}, height: ${viewport.height}`
+    );
+
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5°
+    const maxIndex = mediaItems.length - 1;
+    const maxX = viewport.width * 0.45;
+    const maxY = viewport.height * 0.45;
 
     return mediaItems.map((item, index) => {
-      // Create a more even distribution across the screen
-      const totalItems = mediaItems.length;
+      const t = index / maxIndex;
 
-      // Use golden ratio for better distribution
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
-      const radius = Math.sqrt(index); // Gradually increase radius
+      const radius = Math.pow(t, 0.75);
+      // const radius = t;
+      // const radius = Math.sqrt(t);
+
       const angle = index * goldenAngle;
 
-      // Spread across a larger area
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-
-      // Z-depth: alternate between closer and further for layering
-      const z = (index % 2 === 0 ? 1 : -1) * (Math.random() * 2 + 1);
-
-      // Scale: slightly random but consistent
-      const scale = 1.5 + Math.random() * 0.5;
+      const x = Math.cos(angle) * radius * maxX;
+      const y = Math.sin(angle) * radius * maxY;
 
       return {
         item,
-        position: [x, y, z] as [number, number, number],
-        scale,
+        position: [x, y, 0] as [number, number, number],
+        scale: 2,
       };
     });
-  }, [mediaItems]);
+  }, [mediaItems, viewport.width, viewport.height]);
 
   // Camera setup
   useEffect(() => {
@@ -83,102 +52,19 @@ const GalleryScene = ({
   return (
     <>
       <ambientLight intensity={1} />
-
-      {/* Render image planes */}
-      {imagePositions.map(({ item, position, scale }, index) => (
-        // <A11y
-        //   key={item.id}
-        //   role="image"
-        //   description={item.original_name || item.filename}
-        // >
+      {imagePositions.map(({ item, position, scale }) => (
         <ImagePlane
           key={item.id}
           item={item}
           position={position}
           scale={scale}
         />
-        // </A11y>
       ))}
     </>
   );
 };
 
-// Custom controls component with mouse drag support
-const CustomControls = () => {
-  const { camera } = useThree();
-  const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
-
-  useEffect(() => {
-    if (controlsRef.current) {
-      // Enable panning with mouse drag
-      controlsRef.current.enablePan = true;
-      controlsRef.current.enableZoom = true;
-      controlsRef.current.enableRotate = false;
-
-      // Enable damping for smooth movement
-      controlsRef.current.enableDamping = true;
-      controlsRef.current.dampingFactor = 0.05;
-
-      // Set limits
-      controlsRef.current.minDistance = 2;
-      controlsRef.current.maxDistance = 10;
-
-      // Configure mouse buttons for panning
-      controlsRef.current.mouseButtons = {
-        LEFT: THREE.MOUSE.PAN,
-        MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: THREE.MOUSE.ROTATE,
-      };
-
-      // Increase pan speed for better responsiveness
-      controlsRef.current.panSpeed = 2.0;
-    }
-  }, []);
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      enableRotate={false}
-      enablePan={true}
-      enableZoom={true}
-      minDistance={2}
-      maxDistance={20}
-      panSpeed={2.0}
-      zoomSpeed={1.2}
-      mouseButtons={{
-        LEFT: THREE.MOUSE.PAN,
-        MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: THREE.MOUSE.ROTATE,
-      }}
-    />
-  );
-};
-
 const ThreeGallery: React.FC<ThreeGalleryProps> = ({ mediaItems }) => {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case "ArrowRight":
-          setSelectedIndex((prev) => (prev + 1) % mediaItems.length);
-          break;
-        case "ArrowLeft":
-          setSelectedIndex(
-            (prev) => (prev - 1 + mediaItems.length) % mediaItems.length
-          );
-          break;
-        case "Enter":
-          // Handle selection
-          console.log("Selected:", mediaItems[selectedIndex]);
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mediaItems, selectedIndex]);
-
   return (
     <div>
       <Canvas
@@ -191,14 +77,22 @@ const ThreeGallery: React.FC<ThreeGalleryProps> = ({ mediaItems }) => {
           left: 0,
         }}
       >
-        <GalleryScene mediaItems={mediaItems} selectedIndex={selectedIndex} />
-        <CustomControls />
+        <GalleryScene mediaItems={mediaItems} />
+        <OrbitControls
+          enableRotate={false}
+          enablePan={true}
+          enableZoom={true}
+          minDistance={-2}
+          maxDistance={15}
+          panSpeed={2.0}
+          zoomSpeed={1.2}
+          mouseButtons={{
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE,
+          }}
+        />
       </Canvas>
-
-      {/* Keyboard navigation instructions */}
-      <div className="fixed bottom-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
-        Use arrow keys to navigate, Enter to select
-      </div>
     </div>
   );
 };
