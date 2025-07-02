@@ -6,7 +6,7 @@ import { HiPlusCircle } from "react-icons/hi2";
 import UploadMedia from "@/components/Media/Upload";
 import CreatePost from "@/components/Post/Create";
 
-const ActionsButton = () => {
+const ActionsButton = ({ className }: { className?: string }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleOpen = () => {
@@ -18,9 +18,9 @@ const ActionsButton = () => {
   };
 
   return (
-    <div>
+    <div className={className}>
       <HiPlusCircle
-        className="m-2 text-5xl cursor-pointer"
+        className="text-5xl cursor-pointer"
         onClick={isOpen ? handleClose : handleOpen}
       />
       {isOpen && (

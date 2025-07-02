@@ -2,11 +2,9 @@ import { Fragment } from "react";
 import { redirect } from "next/navigation";
 
 import { getAuthCookie } from "@/lib/cookies";
-
 import LogoutButton from "@/components/Buttons/Logout";
 import ActionsButton from "@/components/Buttons/Actions";
-
-import MediaGallery from "@/components/Media/Gallery";
+import MediaGallery from "@/components/Media/View/Gallery";
 
 const UserPage = async ({ params }: { params: Promise<{ user: string }> }) => {
   const { user } = await params;
@@ -19,17 +17,12 @@ const UserPage = async ({ params }: { params: Promise<{ user: string }> }) => {
 
   return (
     <Fragment>
-      {/* UI Elements - positioned above gallery */}
-      <div className="relative z-10 flex justify-between items-center mb-8 p-4">
-        <h1 className="text-3xl font-bold">{`Welcome ${user}!`}</h1>
-        <div className="flex items-center gap-4">
-          <ActionsButton />
-          <LogoutButton />
-        </div>
-      </div>
-
-      {/* Gallery component */}
+      <LogoutButton className="absolute top-0 right-0 z-10 p-4 m-4" />
       <MediaGallery />
+      <div className="absolute top-0 left-0 z-10 p-4">
+        <h1 className="text-xl font-bold">{`${user}'s collection`}</h1>
+      </div>
+      <ActionsButton className="absolute bottom-0 left-0 z-10 p-3" />
     </Fragment>
   );
 };

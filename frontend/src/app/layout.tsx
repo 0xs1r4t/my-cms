@@ -12,6 +12,18 @@ const authenticSansHeadings = localFont({
   variable: "--authentic-sans-condensed",
 });
 
+const thatThatPixelFont = localFont({
+  src: "./fonts/ThatThatNewPixelVariable-Regular.woff",
+  variable: "--pixel-regular",
+  style: "normal",
+});
+
+const thatThatPixelItalic = localFont({
+  src: "./fonts/ThatThatNewPixelVariable-Italic.woff",
+  variable: "--pixel-italic",
+  style: "italic",
+});
+
 export const metadata: Metadata = {
   title: "Sirat's CMS",
   description:
@@ -26,7 +38,7 @@ const RootLayout = ({
   return (
     <html lang="en">
       <body
-        className={`${authenticSans.variable} ${authenticSansHeadings.variable} antialiased flex flex-col container mx-auto justify-center items-center justify-items-center min-h-screen`}
+        className={`${authenticSans.variable} ${authenticSansHeadings.variable} ${thatThatPixelFont.variable} ${thatThatPixelItalic.variable} antialiased flex flex-col container mx-auto justify-center items-center justify-items-center min-h-screen`}
       >
         {children}
       </body>

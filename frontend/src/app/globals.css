@@ -7,13 +7,15 @@
 /* https://coolors.co/palette/97dffc-858ae3-613dc1-4e148c-2c0735 */
 
 :root {
-  --background: #e2ffd4;
+  --background: #e7d4ff;
   --foreground: #0e0e0e;
   --primary: #461d7c;
   --secondary: #fff;
 
   --authentic-sans: "Authentic Sans", Arial, Helvetica, sans-serif;
   --authentic-sans-condensed: "Authentic Sans Condensed", Arial, Helvetica, sans-serif;
+  --pixel-regular: "That That New Pixel Variable", Arial, Helvetica, sans-serif;
+  --pixel-italic: "That That New Pixel Variable Italic", Arial, Helvetica, sans-serif;
 }
 
 @theme inline {
@@ -26,7 +28,8 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--authentic-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--pixel-regular), Arial, Helvetica, sans-serif;
+  font-size: 1.5em;
 }
 
 h1 {
@@ -35,7 +38,7 @@ h1 {
 }
 
 h1, h2, h3 {
-  font-family: var(--authentic-sans-condensed), Arial, Helvetica, sans-serif;
+  font-family: var(--pixel-italic), Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -45,6 +48,13 @@ a {
 }
 
 button {
+  font-family: var(--authentic-sans), Arial, Helvetica, sans-serif;
   background-color: var(--color-foreground);
   color: var(--color-secondary);
+}
+
+button:hover {
+  scale: 1.1;
+  transition: scale 0.3s ease;
+  drop-shadow: 0 0 20px #000;
 }

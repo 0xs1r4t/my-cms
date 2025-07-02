@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 
-import ThreeGallery from "@/components/Media/3DGallery";
+import CanvasGallery from "@/components/Media/View/Canvas";
 import { getMediaFiles } from "@/lib/actions/media/view";
 import { useMediaStore } from "@/store/useStore";
 
@@ -20,7 +20,7 @@ const MediaGallery = () => {
   };
 
   useEffect(() => {
-    // Only fetch if we don't have items or if refresh is triggered
+    // ✅ Auto-refresh on manual trigger or first load
     if (mediaItems.length === 0 || refreshTrigger > 0) {
       fetchMedia();
     }
@@ -36,7 +36,7 @@ const MediaGallery = () => {
 
   return (
     <>
-      <ThreeGallery mediaItems={mediaItems} />
+      <CanvasGallery mediaItems={mediaItems} />
     </>
   );
 };
