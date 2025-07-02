@@ -17,7 +17,7 @@ const LoginButton = () => {
   return (
     <button
       onClick={handleGitHubLogin}
-      className="flex flex-row items-center gap-3 text-lg px-4 py-2 rounded-xl hover:shadow-md transition-shadow"
+      className="flex flex-row items-center gap-3 text-lg px-4 py-2 rounded-xl"
     >
       <FaGithub size={22} /> <span>Login with Github</span>
     </button>

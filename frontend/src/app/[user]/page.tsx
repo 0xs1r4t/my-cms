@@ -1,8 +1,10 @@
 import { Fragment } from "react";
-import { getAuthCookie } from "@/lib/cookies";
 import { redirect } from "next/navigation";
 
-import LogoutButton from "@/components/LogoutButton";
+import { getAuthCookie } from "@/lib/cookies";
+import LogoutButton from "@/components/Buttons/Logout";
+import ActionsButton from "@/components/Buttons/Actions";
+import MediaGallery from "@/components/Media/View/Gallery";
 
 const UserPage = async ({ params }: { params: Promise<{ user: string }> }) => {
   const { user } = await params;
@@ -15,8 +17,12 @@ const UserPage = async ({ params }: { params: Promise<{ user: string }> }) => {
 
   return (
     <Fragment>
-      <h1 className="text-2xl font-bold">{` Welcome ${user}!`}</h1>
-      <LogoutButton />
+      <LogoutButton className="absolute top-0 right-0 z-10 p-4 m-4" />
+      <MediaGallery />
+      <div className="absolute top-0 left-0 z-10 p-4">
+        <h1 className="text-xl font-bold">{`${user}'s collection`}</h1>
+      </div>
+      <ActionsButton className="absolute bottom-0 left-0 z-10 p-3" />
     </Fragment>
   );
 };

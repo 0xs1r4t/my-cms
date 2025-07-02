@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, or_
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 from ..models.media import Media
 
@@ -22,7 +22,7 @@ class MediaService:
         status: str = "draft",
         meta_data: dict = None,
     ) -> Media:
-        """Create media record"""
+        """Create single media record"""
         db_media = Media(
             filename=filename,
             original_name=original_name,
@@ -32,7 +32,7 @@ class MediaService:
             file_size=file_size,
             asset_type=asset_type,
             status=status,
-            created_by_id=created_by_id,  # Added this field
+            created_by_id=created_by_id,
             meta_data=meta_data or {},
         )
 
@@ -40,6 +40,60 @@ class MediaService:
         self.db.commit()
         self.db.refresh(db_media)
         return db_media
+
+    def create_multiple_media(
+        self,
+        upload_results: List[Dict[str, Any]],
+        created_by_id: UUID,
+        status: str = "draft",
+    ) -> List[Media]:
+        """Create multiple media records from upload results"""
+        media_records = []
+
+        for result in upload_results:
+            if result.get("error") or not result.get("success", True):
+                # Skip failed uploads
+                continue
+
+            db_media = Media(
+                filename=result["filename"],
+                original_name=result["original_name"],
+                file_path=result["file_path"],
+                public_url=result["public_url"],
+                mime_type=result["mime_type"],
+                file_size=result["file_size"],
+                asset_type=self._get_asset_type(result["mime_type"]),
+                status=status,
+                created_by_id=created_by_id,
+                meta_data={},
+            )
+
+            self.db.add(db_media)
+            media_records.append(db_media)
+
+        if media_records:
+            self.db.commit()
+            for media in media_records:
+                self.db.refresh(media)
+
+        return media_records
+
+    def _get_asset_type(self, mime_type: str) -> str:
+        """Determine asset type from MIME type"""
+        if mime_type.startswith("image/"):
+            return "image"
+        elif mime_type.startswith("video/"):
+            return "video"
+        elif mime_type.startswith("audio/"):
+            return "audio"
+        elif mime_type in [
+            "model/gltf+json",
+            "model/gltf-binary",
+            "application/octet-stream",
+        ]:
+            return "model_3d"
+        else:
+            return "document"
 
     def get_media_list(
         self,
