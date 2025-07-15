@@ -19,7 +19,13 @@ const ImagePlane = ({
   onClick?: (item: MediaItem) => void;
 }) => {
   return (
-    <Html position={position} distanceFactor={1} transform occlude>
+    <Html
+      position={position}
+      distanceFactor={1}
+      transform
+      occlude
+      className="will-change-transform"
+    >
       <LazyMotion features={loadFeatures}>
         <m.div
           initial={{ opacity: 0, scale: 0.5 }}
@@ -35,6 +41,10 @@ const ImagePlane = ({
             height={512}
             className={` w-[${scale * 50}px] h-auto cursor-pointer`} // w-[${scale * 50}px] h-auto pointer-events-auto hover:border-2 hover:border-pink-500 hover:drop-shadow-[0_0_10px_rgba(255,20,147,0.5)]
             loading="lazy"
+            // placeholder="blur"
+            // blurDataURL=""
+            lazyBoundary="viewport"
+            unoptimized={item.original_name?.endsWith(".gif") ? true : false}
           />
         </m.div>
       </LazyMotion>

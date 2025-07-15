@@ -16,13 +16,19 @@ export interface MediaItem {
   asset_type: string;
   file_size: number;
   status: string;
+  tags: string[];
   created_by: {
     id: string;
     username: string;
-    avatar_url: string;
+    avatar_url: string | null;
   };
   created_at: string;
   updated_at: string;
+}
+
+export interface MediaUpdate {
+  filename?: string;
+  tags?: string[];
 }
 
 // ===== STORE INTERFACES =====
@@ -58,6 +64,12 @@ export interface MediaUploadResponse {
   errors?: {
     file?: string[];
   };
+}
+
+interface ModifyMediaResponse {
+  message?: string;
+  errors?: Record<string, string[]>;
+  media?: MediaItem;
 }
 
 // ===== FORM INTERFACES =====

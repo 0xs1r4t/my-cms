@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, BigInteger, DateTime, Index, ForeignKey
+from sqlalchemy import Column, String, BigInteger, DateTime, Index, ForeignKey, ARRAY
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -28,6 +28,8 @@ class Media(Base):
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    tags = Column(ARRAY(String), default=[])
 
     __table_args__ = (
         Index("idx_media_type_created", "asset_type", "created_at"),
