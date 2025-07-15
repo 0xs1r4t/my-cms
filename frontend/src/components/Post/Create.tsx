@@ -1,13 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
-import { HiRss, HiX, HiPlus, HiMinus } from "react-icons/hi";
-import { createPost } from "@/lib/actions/posts/create";
+import React, { useState, useEffect } from "react";
+import {
+  HiRss,
+  HiX,
+  HiPlus,
+  HiMinus,
+  HiOutlinePlusCircle,
+  HiOutlinePhotograph,
+  HiOutlineDocumentText,
+} from "react-icons/hi";
+import {
+  createPost,
+  ContentBlock,
+  createMarkdownBlock,
+  createMediaBlock,
+  getMediaForSelector,
+} from "@/lib/actions/posts/create";
+import type { MediaItem } from "@/utils/interfaces";
+import Image from "next/image";
 
 interface PostFormData {
   title: string;
   slug: string;
   description: string;
+  content_blocks: ContentBlock[];
   tags: string[];
   type: string;
   status: "draft" | "published" | "archived";
@@ -24,11 +41,31 @@ const CreatePost = () => {
     title: "",
     slug: "",
     description: "",
+    content_blocks: [createMarkdownBlock("", 0)],
     tags: [],
     type: "",
     status: "draft",
   });
   const [newTag, setNewTag] = useState("");
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
+  const [currentBlockIndex, setCurrentBlockIndex] = useState<number | null>(
+    null
+  );
+
+  // Fetch media items when the component mounts
+  useEffect(() => {
+    if (isOpen) {
+      fetchMedia();
+    }
+  }, [isOpen]);
+
+  const fetchMedia = async () => {
+    const media = await getMediaForSelector(50);
+    if (media) {
+      setMediaItems(media);
+    }
+  };
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -41,6 +78,7 @@ const CreatePost = () => {
       title: "",
       slug: "",
       description: "",
+      content_blocks: [createMarkdownBlock("", 0)],
       tags: [],
       type: "",
       status: "draft",
@@ -49,8 +87,72 @@ const CreatePost = () => {
     setSubmitMessage(null);
   };
 
-  const handleInputChange = (field: keyof PostFormData, value: string) => {
+  const handleInputChange = (
+    field: keyof Omit<PostFormData, "content_blocks">,
+    value: string
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleContentBlockChange = (index: number, content: string) => {
+    setFormData((prev) => {
+      const newBlocks = [...prev.content_blocks];
+      newBlocks[index] = { ...newBlocks[index], block_content: content };
+      return { ...prev, content_blocks: newBlocks };
+    });
+  };
+
+  const addContentBlock = (blockType: "markdown" | "media" = "markdown") => {
+    if (blockType === "markdown") {
+      setFormData((prev) => {
+        const newBlocks = [...prev.content_blocks];
+        newBlocks.push(createMarkdownBlock("", newBlocks.length));
+        return { ...prev, content_blocks: newBlocks };
+      });
+    } else if (blockType === "media") {
+      setCurrentBlockIndex(formData.content_blocks.length);
+      setIsMediaSelectorOpen(true);
+    }
+  };
+
+  const addMediaBlock = (mediaId: string) => {
+    if (currentBlockIndex !== null) {
+      // Adding to existing block
+      setFormData((prev) => {
+        const newBlocks = [...prev.content_blocks];
+        newBlocks[currentBlockIndex] = createMediaBlock(
+          mediaId,
+          currentBlockIndex
+        );
+        return { ...prev, content_blocks: newBlocks };
+      });
+    } else {
+      // Adding as new block
+      setFormData((prev) => {
+        const newBlocks = [...prev.content_blocks];
+        newBlocks.push(createMediaBlock(mediaId, newBlocks.length));
+        return { ...prev, content_blocks: newBlocks };
+      });
+    }
+    setIsMediaSelectorOpen(false);
+    setCurrentBlockIndex(null);
+  };
+
+  const removeContentBlock = (index: number) => {
+    setFormData((prev) => {
+      if (prev.content_blocks.length <= 1) return prev; // Keep at least one block
+
+      const newBlocks = [...prev.content_blocks];
+      newBlocks.splice(index, 1);
+
+      // Update order values
+      const updatedBlocks = newBlocks.map((block, idx) => ({
+        ...block,
+        block_order: idx,
+      }));
+
+      return { ...prev, content_blocks: updatedBlocks };
+    });
   };
 
   const handleAddTag = () => {
@@ -118,6 +220,51 @@ const CreatePost = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Render a block based on its type
+  const renderBlock = (block: ContentBlock, index: number) => {
+    if (block.block_type === "markdown") {
+      return (
+        <textarea
+          value={block.block_content}
+          onChange={(e) => handleContentBlockChange(index, e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter markdown content"
+          disabled={isSubmitting}
+        />
+      );
+    } else if (block.block_type === "media") {
+      const media = mediaItems.find((item) => item.id === block.block_content);
+      return (
+        <div className="relative border border-gray-300 rounded-md p-2 bg-gray-50">
+          <div className="flex items-center">
+            <HiOutlinePhotograph className="text-2xl text-gray-500 mr-2" />
+            <div className="flex-1 overflow-hidden">
+              <p className="text-sm font-medium truncate">
+                {media?.filename || "Media"}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {block.block_content}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="text-blue-600 hover:text-blue-800 text-sm"
+              onClick={() => {
+                setCurrentBlockIndex(index);
+                setIsMediaSelectorOpen(true);
+              }}
+              disabled={isSubmitting}
+            >
+              Change
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -217,6 +364,54 @@ const CreatePost = () => {
                   placeholder="Enter post description"
                   disabled={isSubmitting}
                 />
+              </div>
+
+              {/* Content Blocks */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Content Blocks *
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => addContentBlock("markdown")}
+                      disabled={isSubmitting}
+                      className="flex items-center text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 px-2 py-1 border border-blue-200 rounded"
+                    >
+                      <HiOutlineDocumentText className="mr-1" /> Add Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addContentBlock("media")}
+                      disabled={isSubmitting}
+                      className="flex items-center text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 px-2 py-1 border border-blue-200 rounded"
+                    >
+                      <HiOutlinePhotograph className="mr-1" /> Add Media
+                    </button>
+                  </div>
+                </div>
+
+                {formData.content_blocks.map((block, index) => (
+                  <div key={index} className="mb-4 relative">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-gray-500">
+                        Block {index + 1} ({block.block_type})
+                      </span>
+                      {formData.content_blocks.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeContentBlock(index)}
+                          disabled={isSubmitting}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {renderBlock(block, index)}
+                  </div>
+                ))}
               </div>
 
               {/* Type */}
@@ -333,6 +528,70 @@ const CreatePost = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Media Selector Modal */}
+      {isMediaSelectorOpen && (
+        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-medium">Select Media</h3>
+              <button
+                onClick={() => setIsMediaSelectorOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <HiX className="text-xl" />
+              </button>
+            </div>
+
+            <div className="p-4">
+              {mediaItems.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">
+                  No media items found
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {mediaItems.map((media) => (
+                    <div
+                      key={media.id}
+                      onClick={() => addMediaBlock(media.id)}
+                      className="cursor-pointer border border-gray-200 rounded-lg overflow-hidden hover:border-blue-500 transition-colors"
+                    >
+                      {media.asset_type === "image" ? (
+                        <div className="aspect-w-1 aspect-h-1 bg-gray-100">
+                          <Image
+                            src={media.public_url}
+                            alt={media.filename}
+                            className="object-cover w-full h-full"
+                            width={512}
+                            height={512}
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-w-1 aspect-h-1 bg-gray-100 flex items-center justify-center">
+                          <HiOutlineDocumentText className="text-4xl text-gray-400" />
+                        </div>
+                      )}
+                      <div className="p-2">
+                        <p className="text-xs truncate">{media.filename}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-4 border-t">
+              <button
+                type="button"
+                onClick={() => setIsMediaSelectorOpen(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

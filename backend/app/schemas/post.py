@@ -1,13 +1,40 @@
 from pydantic import BaseModel, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Union, Literal
 from datetime import datetime
 from uuid import UUID
+
+
+class ContentBlockBase(BaseModel):
+    block_type: str  # "markdown" or "media"
+    block_content: str
+    block_order: int
+
+
+class ContentBlockCreate(ContentBlockBase):
+    pass
+
+
+class ContentBlockUpdate(ContentBlockBase):
+    block_type: Optional[str] = None
+    block_content: Optional[str] = None
+    block_order: Optional[int] = None
+
+
+class ContentBlockResponse(ContentBlockBase):
+    id: str
+    post_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class PostCreate(BaseModel):
     title: str
     slug: str
     description: Optional[str] = None
+    content_blocks: List[ContentBlockCreate] = []
     tags: List[str] = []
     type: Optional[str] = None
     status: str = "draft"
@@ -34,6 +61,7 @@ class PostUpdate(BaseModel):
     title: Optional[str] = None
     slug: Optional[str] = None
     description: Optional[str] = None
+    content_blocks: Optional[List[ContentBlockCreate]] = None
     tags: Optional[List[str]] = None
     type: Optional[str] = None
     status: Optional[str] = None
@@ -52,12 +80,13 @@ class PostResponse(BaseModel):
     title: str
     slug: str
     description: Optional[str]
+    content_blocks: List[ContentBlockResponse]
     tags: List[str]
     type: Optional[str]
     status: str
     content_media_id: Optional[str]
     content_url: Optional[str] = None
-    created_by: CreatedByUser  # NEW
+    created_by: CreatedByUser
     published_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

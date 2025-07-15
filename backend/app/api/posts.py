@@ -7,11 +7,12 @@ from datetime import datetime, UTC
 
 from ..core.database import get_db
 
-from ..models.post import Post
-from ..models.user import User
-from ..schemas.post import PostCreate, PostResponse, PostUpdate, CreatedByUser
-
+from ..models.post import Post, ContentBlock
 from ..models.media import Media
+from ..models.user import User
+
+from ..schemas.post import ContentBlockResponse
+from ..schemas.post import PostCreate, PostResponse, PostUpdate, CreatedByUser
 
 from .auth import get_current_user  # , get_optional_user
 from ..schemas.user import UserResponse
@@ -66,6 +67,18 @@ def list_posts(
             title=post.title,
             slug=post.slug,
             description=post.description,
+            content_blocks=[
+                ContentBlockResponse(
+                    id=str(block.id),
+                    post_id=str(block.post_id),
+                    block_type=block.block_type,
+                    block_content=block.block_content,
+                    block_order=block.block_order,
+                    created_at=block.created_at,
+                    updated_at=block.updated_at,
+                )
+                for block in post.content_blocks
+            ],
             tags=post.tags or [],
             type=post.type,
             status=post.status,
@@ -126,6 +139,18 @@ def get_post(
         title=post.title,
         slug=post.slug,
         description=post.description,
+        content_blocks=[
+            ContentBlockResponse(
+                id=str(block.id),
+                post_id=str(block.post_id),
+                block_type=block.block_type,
+                block_content=block.block_content,
+                block_order=block.block_order,
+                created_at=block.created_at,
+                updated_at=block.updated_at,
+            )
+            for block in post.content_blocks
+        ],
         tags=post.tags or [],
         type=post.type,
         status=post.status,
@@ -159,21 +184,7 @@ def create_post(
             status_code=400, detail="Post with this slug already exists"
         )
 
-    # Validate content_media_id if provided
-    content_media = None
-    if post.content_media_id:
-        content_media = (
-            db.query(Media).filter(Media.id == post.content_media_id).first()
-        )
-        if not content_media:
-            raise HTTPException(status_code=400, detail="Content media not found")
-
-        # Check if user owns the media
-        if content_media.created_by_id != current_user.id:
-            raise HTTPException(
-                status_code=403, detail="You can only use media files you've uploaded"
-            )
-
+    # Create post without content blocks first
     db_post = Post(
         title=post.title,
         slug=post.slug,
@@ -188,11 +199,49 @@ def create_post(
     )
 
     db.add(db_post)
+    db.flush()  # This assigns an ID to db_post without committing
+
+    # Now create content blocks
+    for block in post.content_blocks:
+        content_block = ContentBlock(
+            post_id=db_post.id,
+            block_type=block.block_type,
+            block_content=block.block_content,
+            block_order=block.block_order,
+        )
+        db.add(content_block)
+
+    # Create a media entry for this post
+    media_entry = Media(
+        filename=f"post-{db_post.slug}",
+        original_name=db_post.title,
+        mime_type="application/json",  # Using JSON as the MIME type for posts
+        file_size=len(db_post.description or "")
+        + sum(len(block.block_content) for block in post.content_blocks),
+        file_path=f"/posts/{db_post.id}",
+        public_url=f"/api/v1/posts/{db_post.id}",
+        asset_type="post",
+        status=db_post.status,
+        created_by_id=current_user.id,
+        tags=db_post.tags or [],
+        meta_data={
+            "post_id": str(db_post.id),
+            "post_slug": db_post.slug,
+            "post_type": db_post.type,
+        },
+    )
+
+    db.add(media_entry)
+    db.flush()
+
+    # Update the post with its media ID
+    db_post.content_media_id = media_entry.id
+
     db.commit()
     db.refresh(db_post)
+    db.refresh(media_entry)
 
     # Load the created_by relationship
-    db.refresh(db_post)
     created_by_user = db.query(User).filter(User.id == current_user.id).first()
 
     return PostResponse(
@@ -200,13 +249,23 @@ def create_post(
         title=db_post.title,
         slug=db_post.slug,
         description=db_post.description,
+        content_blocks=[
+            ContentBlockResponse(
+                id=str(block.id),
+                post_id=str(block.post_id),
+                block_type=block.block_type,
+                block_content=block.block_content,
+                block_order=block.block_order,
+                created_at=block.created_at,
+                updated_at=block.updated_at,
+            )
+            for block in db_post.content_blocks
+        ],
         tags=db_post.tags or [],
         type=db_post.type,
         status=db_post.status,
-        content_media_id=(
-            str(db_post.content_media_id) if db_post.content_media_id else None
-        ),
-        content_url=content_media.public_url if content_media else None,
+        content_media_id=str(media_entry.id),
+        content_url=media_entry.public_url,
         created_by=CreatedByUser(
             id=str(created_by_user.id),
             username=created_by_user.username,
@@ -261,6 +320,18 @@ def update_post(
         title=post.title,
         slug=post.slug,
         description=post.description,
+        content_blocks=[
+            ContentBlockResponse(
+                id=str(block.id),
+                post_id=str(block.post_id),
+                block_type=block.block_type,
+                block_content=block.block_content,
+                block_order=block.block_order,
+                created_at=block.created_at,
+                updated_at=block.updated_at,
+            )
+            for block in post.content_blocks
+        ],
         tags=post.tags or [],
         type=post.type,
         status=post.status,
