@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+// ====== USER + AUTH SCHEMAS ======
+
 export const AuthResponseSchema = z.object({
   access_token: z.string(),
   token_type: z.literal("bearer"),
@@ -25,7 +27,8 @@ export const CallbackQuerySchema = z.object({
   //   user_id: z.string().uuid("Invalid user ID"),
 });
 
-// POSTS
+// ====== POSTS SCHEMAS ======
+
 export const PostCreateSchema = z.object({
   title: z
     .string()
@@ -67,6 +70,8 @@ export const PostResponseSchema = z.object({
   meta_data: z.record(z.any()).nullable(),
 });
 
+// ====== MEDIA SCHEMAS ======
+
 export const MediaResponseSchema = z.object({
   id: z.string().uuid("Invalid media ID"),
   filename: z.string(),
@@ -75,6 +80,7 @@ export const MediaResponseSchema = z.object({
   asset_type: z.string(),
   file_size: z.number().int().positive("File size must be positive"),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
+  tags: z.array(z.string()).default([]), // Add this
   created_by: z.object({
     id: z.string().uuid("Invalid user ID"),
     username: z.string(),
@@ -87,4 +93,9 @@ export const MediaResponseSchema = z.object({
 export const MediaUploadSchema = z.object({
   file: z.instanceof(File, { message: "Please select a file" }),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
+});
+
+export const MediaUpdateSchema = z.object({
+  filename: z.string().min(1, "Filename is required").optional(),
+  tags: z.array(z.string()).optional(),
 });

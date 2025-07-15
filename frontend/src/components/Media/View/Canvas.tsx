@@ -6,9 +6,8 @@ import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 
-import Image from "next/image";
 import Scene from "@/components/Media/View/Scene";
-import ManageImage from "@/components/Media/View/ManageImage";
+import ManageImage from "@/components/Media/Modify/ManageImage";
 import type { MediaItem, ThreeGalleryProps } from "@/utils/interfaces";
 
 const CanvasGallery: React.FC<ThreeGalleryProps> = ({ mediaItems }) => {
@@ -33,6 +32,8 @@ const CanvasGallery: React.FC<ThreeGalleryProps> = ({ mediaItems }) => {
           top: 0,
           left: 0,
         }}
+        gl={{ antialias: false }}
+        dpr={[1, 1.5]}
       >
         <Scene mediaItems={mediaItems} onSelect={setSelectedItem} />
         <OrbitControls

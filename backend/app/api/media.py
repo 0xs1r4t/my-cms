@@ -8,7 +8,7 @@ from ..services.storage_service import StorageService
 from ..services.media_service import MediaService
 from ..core.config import settings
 from ..schemas.post import CreatedByUser
-from ..schemas.media import MediaResponse
+from ..schemas.media import MediaResponse, MediaUpdate
 
 from .auth import get_current_user  # , get_optional_user
 from ..schemas.user import UserResponse
@@ -81,6 +81,7 @@ async def upload_media(
                     asset_type=media_record.asset_type,
                     file_size=media_record.file_size,
                     status=media_record.status,
+                    tags=media_record.tags or [],
                     created_by=CreatedByUser(
                         id=str(media_record.created_by.id),
                         username=media_record.created_by.username,
@@ -105,7 +106,7 @@ def list_media(
     limit: int = Query(20, ge=1, le=100),
     asset_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-    # current_user: Optional[UserResponse] = Depends(get_optional_user),
+    tags: Optional[List[str]] = Query(None),
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -127,6 +128,7 @@ def list_media(
         limit=limit,
         asset_type=asset_type,
         status=status_filter,
+        tags=tags,
         user_id=current_user.id if current_user else None,
     )
 
@@ -139,6 +141,7 @@ def list_media(
             asset_type=media.asset_type,
             file_size=media.file_size,
             status=media.status,
+            tags=media.tags or [],
             created_by=CreatedByUser(
                 id=str(media.created_by.id),
                 username=media.created_by.username,
@@ -149,6 +152,102 @@ def list_media(
         )
         for media in media_files
     ]
+
+
+@router.get("/{media_id}")
+async def get_media(
+    media_id: UUID,
+    status: Optional[str] = Query(None),
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get media file by ID, with optional status filter"""
+    media_service = MediaService(db)
+
+    # Get the media by ID
+    media = media_service.get_media_by_id(media_id)
+
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    # Apply status filtering logic
+    if not current_user:
+        # If not authenticated, only show published media
+        if media.status != "published":
+            raise HTTPException(status_code=404, detail="Media not found")
+    elif status:
+        # If authenticated and status filter provided, check if it matches
+        if media.status != status:
+            raise HTTPException(status_code=404, detail="Media not found")
+    else:
+        # If authenticated but no status filter, show user's media + published from others
+        if media.created_by_id != current_user.id and media.status != "published":
+            raise HTTPException(status_code=404, detail="Media not found")
+
+    return MediaResponse(
+        id=str(media.id),
+        filename=media.filename,
+        original_name=media.original_name,
+        public_url=media.public_url,
+        asset_type=media.asset_type,
+        file_size=media.file_size,
+        status=media.status,
+        tags=media.tags or [],
+        created_by=CreatedByUser(
+            id=str(media.created_by.id),
+            username=media.created_by.username,
+            avatar_url=media.created_by.avatar_url,
+        ),
+        created_at=media.created_at,
+        updated_at=media.updated_at,
+    )
+
+
+@router.put("/{media_id}", response_model=MediaResponse)
+async def update_media(
+    media_id: UUID,
+    media_update: MediaUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update media file"""
+    media_service = MediaService(db)
+
+    # Get existing media
+    existing_media = media_service.get_media_by_id(media_id)
+    if not existing_media:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    # Check ownership
+    if existing_media.created_by_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="You can only update your own media files"
+        )
+
+    # Update media
+    update_data = media_update.model_dump(exclude_unset=True)
+    updated_media = media_service.update_media(media_id, update_data)
+
+    if not updated_media:
+        raise HTTPException(status_code=500, detail="Failed to update media")
+
+    return MediaResponse(
+        id=str(updated_media.id),
+        filename=updated_media.filename,
+        original_name=updated_media.original_name,
+        public_url=updated_media.public_url,
+        asset_type=updated_media.asset_type,
+        file_size=updated_media.file_size,
+        status=updated_media.status,
+        tags=updated_media.tags or [],
+        created_by=CreatedByUser(
+            id=str(updated_media.created_by.id),
+            username=updated_media.created_by.username,
+            avatar_url=updated_media.created_by.avatar_url,
+        ),
+        created_at=updated_media.created_at,
+        updated_at=updated_media.updated_at,
+    )
 
 
 @router.delete("/{media_id}")

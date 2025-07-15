@@ -20,6 +20,7 @@ class MediaService:
         asset_type: str,
         created_by_id: UUID,
         status: str = "draft",
+        tags: List[str] = [],
         meta_data: dict = None,
     ) -> Media:
         """Create single media record"""
@@ -33,6 +34,7 @@ class MediaService:
             asset_type=asset_type,
             status=status,
             created_by_id=created_by_id,
+            tags=tags,
             meta_data=meta_data or {},
         )
 
@@ -101,9 +103,10 @@ class MediaService:
         limit: int = 20,
         asset_type: Optional[str] = None,
         status: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         user_id: Optional[UUID] = None,
     ) -> List[Media]:
-        """Get media files with pagination and user-based filtering"""
+        """Get media files with pagination and filtering"""
         query = self.db.query(Media).options(joinedload(Media.created_by))
 
         if asset_type:
@@ -117,6 +120,11 @@ class MediaService:
                 or_(Media.created_by_id == user_id, Media.status == "published")
             )
 
+        # Add tag filtering
+        if tags:
+            # Filter media that has ANY of the specified tags
+            query = query.filter(Media.tags.overlap(tags))
+
         return query.order_by(desc(Media.created_at)).offset(skip).limit(limit).all()
 
     def get_media_by_id(self, media_id: UUID) -> Optional[Media]:
@@ -127,6 +135,22 @@ class MediaService:
             .filter(Media.id == media_id)
             .first()
         )
+
+    def update_media(self, media_id: UUID, update_data: dict) -> Optional[Media]:
+        """Update media record"""
+        media = self.get_media_by_id(media_id)
+        if not media:
+            return None
+
+        # Update only provided fields
+        for field, value in update_data.items():
+            if hasattr(media, field) and value is not None:
+                setattr(media, field, value)
+
+        # updated_at is handled by SQLAlchemy onupdate
+        self.db.commit()
+        self.db.refresh(media)
+        return media
 
     def delete_media(self, media_id: UUID) -> bool:
         """Delete media record"""
