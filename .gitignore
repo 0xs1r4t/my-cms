@@ -1,7 +1,7 @@
 # .gitignore
 # for the whole monorepo
 
-.cursor/*
+CLAUDE.md
 
 # BACKEND
 

@@ -5,6 +5,7 @@ import { HiPlusCircle } from "react-icons/hi2";
 
 import UploadMedia from "@/components/Media/Upload";
 import CreatePost from "@/components/Post/Create";
+import ModifyBackground from "@/components/Customization/ModifyBackground";
 
 const ActionsButton = ({ className }: { className?: string }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +28,7 @@ const ActionsButton = ({ className }: { className?: string }) => {
         <>
           <UploadMedia />
           <CreatePost />
+          <ModifyBackground />
         </>
       )}
     </div>
